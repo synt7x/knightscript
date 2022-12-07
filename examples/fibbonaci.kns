@@ -1,0 +1,16 @@
+# My fibbonaci program
+function fib(n) {
+    a = 0
+    b = 1
+
+    while (n != 0) {
+        tmp = b
+        b = a + tmp
+        a = tmp
+        n--
+    }
+
+    return a
+}
+
+print(fib(50))

@@ -1,0 +1,4 @@
+greeting = "Hello"
+where = "world"
+
+print(greeting + ", " + world + "!")

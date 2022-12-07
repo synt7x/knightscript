@@ -1,0 +1,79 @@
+name = [A-Za-z_][A-Za-z0-9_]*;
+string = '"' (* non-" character, including \" *) '"'
+       | '"' (* non-' character, including \' *) '"';
+comment = "#" [^\n]*;
+number = [0-9]+;
+boolean = "true" | "false";
+
+namelist = name { ',' name };
+externalname = name | "[" namelist "]";
+indexedname = name ("[" expression "]")* | wrapped;
+
+imports = "import" externalname "from" string;
+exports = "export" externalname ";"*;
+
+program = imports* statement* exports*;
+
+statement = while      |
+            if         |
+            for        |
+            function   |
+            return     |
+            assignment |
+            call       |
+            inplace    |
+            "break"    |
+            ";"        ;
+
+while = "while" "(" expression ")" "{" statement* "}";
+if = "if" "(" expression ")" "{" statement* "}"
+      ("elseif" "(" expression ")" "{" statement* "}")*
+      ("else" "{" statement* "}")?;
+
+forarray = name ("," name)? "in" expression;
+foriterate = name "=" expression "," expression ("," expression)?;
+forbody = forarray | foriterate;
+
+for = "for" "(" forbody ")" "{" statement* "}";
+function = "function" name "(" namelist? ")" "{" statement* "}";
+anonymous = "function" "(" namelist? ")" "{" statement* "}";
+return = "return" expression?;
+assignment = ("local" | "const")? indexedname "=" expression;
+ternary = expression "?" expression ":" expression;
+inplace = indexedname ("+=" | "-=" | "*=" | "/=" | "%=" | "^=") expression | ternary | indexedname ("++" | "--") expression?;
+
+expressionlist = expression ("," expression)*;
+
+array = "[" expressionlist? "]";
+call = indexedname "(" expressionlist ")";
+wrapped = "(" expression ")";
+
+binary = "+"  |
+         "-"  |
+         "*"  |
+         "/"  |
+         "%"  |
+         "^"  |
+         "==" |
+         "!=" |
+         "<"  |
+         ">"  |
+         "<=" |
+         ">=" |
+         "&&" |
+         "||" ;
+
+unary = "-" |
+        "!" ;
+
+expression = "null"                       |
+             boolean                      |
+             number                       |
+             string                       |
+             anonymous                    |
+             indexedname                  |
+             array                        |
+             call                         |
+             wrapped                      |
+             expression binary expression |
+             unary expression             ;
