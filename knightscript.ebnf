@@ -40,7 +40,7 @@ anonymous = "function" "(" namelist? ")" "{" statement* "}";
 return = "return" expression?;
 assignment = ("local" | "const")? indexedname "=" expression;
 ternary = expression "?" expression ":" expression;
-inplace = indexedname ("+=" | "-=" | "*=" | "/=" | "%=" | "^=") expression | ternary | indexedname ("++" | "--") expression?;
+inplace = indexedname ("+=" | "-=" | "*=" | "/=" | "%=" | "^=") expression | ternary | indexedname ("++" | "--");
 
 expressionlist = expression ("," expression)*;
 

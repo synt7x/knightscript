@@ -1,5 +1,5 @@
 function statement(state)
-    state:accept(';')
+    while state:accept(';') do end
 
     if state:test('function') then
         table.insert(state.tree, functionstat.ast(state))
@@ -9,8 +9,8 @@ function statement(state)
         table.insert(state.tree, ifstat.ast(state))
     elseif state:test('for') then
         table.insert(state.tree, forstat.ast(state))
-    else
-        os.exit(1)
+    elseif state.token then
+        table.insert(state.tree, inplace.ast(state))
     end
 end
 
