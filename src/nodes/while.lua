@@ -9,6 +9,16 @@ function whilestat(state)
     }
 
     state:expect(')')
+
+    if not state:test('{') then
+        state:enter(node, node.body)
+
+        statement.ast(state)
+
+        state:exit()
+        return node
+    end
+    
     state:expect('{')
 
     state:enter(node, node.body)

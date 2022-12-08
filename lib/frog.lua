@@ -22,7 +22,7 @@ end
 
 function frog:croak(message)
     if self.options['Q'] then return self end
-    error(message)
+    print(message)
     return self
 end
 

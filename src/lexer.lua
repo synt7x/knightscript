@@ -25,8 +25,10 @@ function lexer.new(input)
 	for name, value in pairs(lexer) do
 		self[name] = value
 	end
+
 	self.tokens = {}
 	self.token = {}
+    self.comments = {}
 	
 	if not input then return end
 
@@ -34,7 +36,17 @@ function lexer.new(input)
 		self:step(input:sub(i, i), input:sub(i + 1, i + 1))
 	end
 
-	return self.tokens
+    if self.token.type then
+        if self.token.type == 'string' then
+            frog:croak('Unclosed string')
+        elseif self.token.type == 'comment' then
+            table.insert(self.comment, self.token)
+        else
+            table.insert(self.tokens, self.token)
+        end
+    end
+
+	return self.tokens, self.comments
 end
 
 function lexer:step(character, peek)
@@ -42,6 +54,7 @@ function lexer:step(character, peek)
 		self:type(character, peek)
 		return 
 	end
+
 	local code = string.byte(character)
 	if self.token.type == 'identifier' then
 		if character == '_' or code >= 97 and code < 123 or code >= 65 and code < 91 or code >= 47 and code < 59 then
@@ -90,7 +103,7 @@ function lexer:step(character, peek)
 		if character ~= '\n' then
 			self.token.string = self.token.string .. character
 		else
-			table.insert(self.tokens, self.token)
+			table.insert(self.comments, self.token)
 			self.token = {}
 		end
 	end

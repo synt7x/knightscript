@@ -4,7 +4,7 @@ local program = require('src/nodes/program')
 
 local parser = {}
 
-function parser.new(tokens, flags)
+function parser.new(tokens, flags, comments)
 	local self = {}
 	for name, value in pairs(parser) do
 		self[name] = value
@@ -13,9 +13,10 @@ function parser.new(tokens, flags)
 	self.index = 1
 	self.flags = flags
 	self.tree = {
-		type = 'file',
+		type = 'program',
 		version = config.version,
-		body = {}
+		body = {},
+        comments = comments
 	}
 
     self.token = self.tokens[self.index]
@@ -53,8 +54,11 @@ function parser:accept(tokenType, tokenString)
 	if not self.token then
 		return 
 	end
+
 	if self:test(tokenType, tokenString) then
-		return self:skip()
+		self.index = self.index + 1
+        self.token = self.tokens[self.index]
+        return self.tokens[self.index - 1]
 	end
 end
 
@@ -75,7 +79,7 @@ function parser:expect(tokenType, tokenString)
 
     if not self.token then
         frog:croak('Expected ' .. tokenType .. ' but got EOF')
-        return
+        os.exit(1)
     end
 
 	if tokenString then
@@ -84,7 +88,9 @@ function parser:expect(tokenType, tokenString)
 		frog:croak('Expected ' .. tokenType .. ' but got ' .. self.token.type)
 	end
 
-    self:skip()
+    while not self:accept(tokenType, tokenString) do
+        if not self:skip() then os.exit(1) end
+    end
 
 	return nil
 end

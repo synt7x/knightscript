@@ -13,4 +13,6 @@ function fib(n) {
     return a
 }
 
+a--1
+
 print(fib(50))

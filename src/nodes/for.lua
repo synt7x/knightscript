@@ -5,7 +5,7 @@ function forstat(state)
     local node = {
         type = 'for',
         variable = {
-            self:expect('identifier')
+            state:expect('identifier')
         },
         body = {}
     }

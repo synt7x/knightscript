@@ -17,6 +17,8 @@ function name(state)
 
             body = body.call
             state:expect(')')
+
+            node.inplace = true
         else
             state:expect('[')
             body.index = {
@@ -26,6 +28,8 @@ function name(state)
 
             body = body.index
             state:expect(']')
+
+            node.inplace = nil
         end
     end
 

@@ -25,10 +25,10 @@ statement = while      |
             "break"    |
             ";"        ;
 
-while = "while" "(" expression ")" "{" statement* "}";
-if = "if" "(" expression ")" "{" statement* "}"
+while = "while" "(" expression ")" ("{" statement* "}" | statement);
+if = "if" "(" expression ")" ("{" statement* "}"
       ("elseif" "(" expression ")" "{" statement* "}")*
-      ("else" "{" statement* "}")?;
+      ("else" "{" statement* "}")? | statement);
 
 forarray = name ("," name)? "in" expression;
 foriterate = name "=" expression "," expression ("," expression)?;

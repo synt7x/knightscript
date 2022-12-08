@@ -1,3 +1,5 @@
+import a from "examples/test.kns"
+
 function primes_upto(max) {
     sieve = []
     primes = []
@@ -10,7 +12,7 @@ function primes_upto(max) {
         if (!sieve[i]) {
             insert(primes, i)
 
-            for (j = i ^ 2, max, i) {\
+            for (j = i ^ 2, max, i) {
                 sieve[j] = true
             }
         }
@@ -19,6 +21,6 @@ function primes_upto(max) {
     return primes
 }
 
-max = number(prompt())
+max = number(prompt("Enter a number:"))
 print("the primes from 2-" + max + "are:")
 print(join(primes_upto(max), " "))
