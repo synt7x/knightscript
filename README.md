@@ -1,5 +1,5 @@
 # KnightScript
-KnightScript is a [Lua](https://lua.org/)-JS hybrid language that was designed to target [Knight](https://github.com/knight-lang). KnightScript using an optimizing compiler to compile directly to Knight. While KnightScript does require Lua for now, it will be self hosted in the future.
+KnightScript is a [Lua](https://lua.org/)-JS hybrid language that was designed to target [Knight](https://github.com/knight-lang). KnightScript uses an optimizing compiler to compile directly to Knight. While KnightScript does require Lua for now, it will be self hosted in the future.
 
 # Running
 In order to run KnightScript, you must first install Lua. You can find standalone executables on the Lua [download](https://lua.org/download.html) page.
