@@ -28,10 +28,10 @@ end
 
 function frog:dump(stage, object)
     if self.options['P'] == stage then
-        local file = io.open(self.options['o'] .. '.json', 'w')
+        local file = io.open(self.options['o'] .. '.lua', 'w')
 
         if file then
-            file:write(json.encode(object))
+            file:write(json(object))
         else
             self:error('Could not open file: ' .. input)
         end

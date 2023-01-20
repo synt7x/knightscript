@@ -1,4 +1,4 @@
-function statement(state)
+local function statement(state)
     while state:accept(';') do end
 
     if state:test('function') then
@@ -13,9 +13,19 @@ function statement(state)
         table.insert(state.tree, returnstat.ast(state))
     elseif state:accept('break') then
         table.insert(state.tree, { type = 'break' })
+    elseif state:accept('local') then
+        table.insert(state.tree, localstat.ast(state))
     elseif state.token then
         table.insert(state.tree, inplace.ast(state))
     end
 end
 
-return { ast = statement }
+local function symbol(state, node)
+    if node.type == 'function' then
+        functionstat.symbol(state, node)
+    else
+        print('unknown statement type: ' .. node.type)
+    end
+end
+
+return { ast = statement, symbol = symbol }

@@ -14,4 +14,10 @@ function import(state)
     return node
 end
 
-return { ast = import }
+local function symbol(state, node)
+    for i, name in ipairs(node.value) do
+        state:definition(name)
+    end
+end
+
+return { ast = import, symbol = symbol }

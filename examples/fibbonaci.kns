@@ -1,7 +1,7 @@
 # My fibbonaci program
 function fib(n) {
-    a = 0
-    b = 1
+    local a = 0
+    local b = 1
 
     while (n != 0) {
         tmp = b

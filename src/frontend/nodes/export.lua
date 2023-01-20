@@ -11,4 +11,8 @@ function export(state)
     return node
 end
 
-return { ast = export }
+local function symbol(state)
+    
+end
+
+return { ast = export, symbol = symbol }

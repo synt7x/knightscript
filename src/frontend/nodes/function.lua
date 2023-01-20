@@ -30,4 +30,23 @@ function functionstat(state)
     return node
 end
 
-return { ast = functionstat }
+local function symbol(state, node)
+    state:initializelocals(node)
+    state:enter(node)
+
+    if node.name then
+        state:definition(node.name)
+    end
+
+    for i, parameter in ipairs(node.parameters) do
+        state:localdefinition(parameter)
+    end
+
+    for i = #node.body, 1, -1 do
+        statement.symbol(state, node.body[i])
+    end
+
+    state:exit()
+end
+
+return { ast = functionstat, symbol = symbol }

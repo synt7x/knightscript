@@ -1,5 +1,3 @@
-local expression = require('src/nodes/expression')
-
 function wrapped(state)
     if state:accept('(') then
         local expr = expression.ast(state)

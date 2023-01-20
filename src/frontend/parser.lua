@@ -1,6 +1,6 @@
 local config = require('config')
 local frog = require('lib/frog')
-local program = require('src/nodes/program')
+local program = require('src/frontend/nodes/program')
 
 local parser = {}
 
