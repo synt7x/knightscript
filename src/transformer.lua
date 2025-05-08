@@ -1,0 +1,166 @@
+local json = require('lib/json')
+local parser = require('src/parser')
+local traversal = parser.traversal
+
+local function builtin(node)
+    local identifier = node.name.characters
+    if identifier == 'print' then
+        node.type = 'output'
+        node.argument = node.args[1] or null()
+        
+        node.name = nil
+        node.args = nil
+    elseif identifier == 'dump' then
+        node.type = 'dump'
+        node.argument = node.args[1] or null()
+            
+        node.name = nil
+        node.args = nil
+    elseif identifier == 'write' then
+        node.type = 'output'
+        node.argument = {
+            type = 'add',
+            right = node.args[1] or null(),
+            left = {
+                type = 'string',
+                value = '\\'
+            }
+        }
+
+        node.name = nil
+        node.args = nil
+    elseif identifier == 'length' then
+        node.type = 'length'
+        node.argument = node.args[1] or null()
+
+        node.name = nil
+        node.args = nil
+    elseif identifier == 'read' then
+        node.type = 'prompt'
+        node.name = nil
+        node.args = nil
+    elseif identifier == 'prompt' then
+        node.type = 'expr'
+        node.left = {
+            type = 'output',
+            argument = {
+                type = 'add',
+                right = node.args[1] or null(),
+                left = {
+                    type = 'string',
+                    value = '\\'
+                }
+            }
+        }
+
+        node.right = {
+            type = 'prompt'
+        }
+
+        node.name = nil
+        node.args = nil
+    end
+
+    return node
+end
+
+local function array(node)
+    if #node.elements == 1 then
+        walk(node.elements[1])
+
+        node.type = 'box'
+        node.argument = node.elements[1]
+    elseif #node.elements > 1 then
+        node.type = 'add'
+
+        local element = node
+        
+        for i = 1, #node.elements do
+            walk(node.elements[i])
+
+            element.left = {
+                type = 'box',
+                argument = node.elements[i]
+            }
+
+            if i == #node.elements - 1 then
+                walk(node.elements[i + 1])
+                element.right = {
+                    type = 'box',
+                    argument = node.elements[i + 1]
+                }
+
+                break
+            end
+
+            element.right = {
+                type = 'add'
+            }
+
+            element = element.right
+        end
+    end
+
+    node.elements = nil
+end
+
+local function null()
+    return {
+        type = 'null'
+    }
+end
+
+function walk(node)
+    if node.type == 'expr' then
+        if not node.right then
+            local left = node.left
+
+            node.left = nil
+            node.right = nil
+
+            for k, v in pairs(left) do
+                node[k] = v
+            end
+
+            walk(node)
+
+            return node
+        end
+
+        walk(node.left)
+        walk(node.right)
+    elseif traversal.binary[node.type] then
+        walk(node.left)
+        walk(node.right)
+    elseif traversal.unary[node.type] then
+        walk(node.argument)
+    elseif node.type == 'assignment' then
+        walk(node.value)
+    elseif node.type == 'call' then
+        if node.name.type == 'identifier' then
+            builtin(node)
+        else
+            walk(node.name)
+        end
+    elseif node.type == 'block' then
+        walk(node.body)
+    elseif node.type == 'while' then
+        walk(node.condition)
+        walk(node.body)
+    elseif node.type == 'if' then
+        walk(node.condition)
+        walk(node.body)
+        walk(node.fallback)
+    elseif node.type == 'array' then
+        array(node)
+    end
+
+    return node
+end
+
+local function transform(ast)
+    ast.body = walk(ast.body)
+    return ast
+end
+
+return transform

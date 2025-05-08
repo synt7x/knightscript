@@ -1,3 +1,5 @@
+import [a, b] from 'examples/test.kns'
+
 a = 1
 
 export a

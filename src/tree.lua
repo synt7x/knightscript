@@ -1,137 +1,7 @@
 local frog = require('lib/frog')
 local json = require('lib/json')
 
-function statement(state)
-    -- Get the current token from the state variable
-    local token = state.token
-
-    -- Try to fit all tokens into a binary expression
-    if not token or state:test('}') or state:test(')') then
-        -- No token found, just return nil
-        return
-
-        -- Will result in a node with the structure
-        -- { ... left = { ... } right = nil }
-        -- This can be compressed into a single node
-    end
-
-    -- All elements are binary expressions
-    local node = {
-        type = 'expr',
-    }
-
-    print(json(token))
-
-    -- Get the node of the left side of the expression
-    if state:test('if') then
-        node.left = if_expr(state)
-    elseif state:test('while') then
-        node.left = while_expr(state)
-    elseif state:test('for') then
-        node.left = for_expr(state)
-    elseif state:test('function') then
-        node.left = function_expr(state)
-    elseif state:test('return') then
-        node.left = return_expr(state)
-    elseif state:test('break') then
-        node.left = break_expr(state)
-    elseif state:test('export') then
-        node.left = export_expr(state)
-    elseif state:test('import') then
-        node.left = import_expr(state)
-    elseif state:test('local') then
-        node.left = local_expr(state)
-    elseif state:test('const') then
-        node.left = const_expr(state)
-    else
-        node.left = expression_stat(state) 
-    end
-
-    -- The right side of the expression is another expression
-    node.right = statement(state)
-    return node
-end
-
-function expression_stat(state)
-    local node = index_expr(state)
-
-    if state:test('=') then
-        if not node or not node.type == 'identifier' then
-            frog:throw(
-                state.token,
-                'Invalid assignment',
-                'The left side of the assignment must be an identifier',
-                'Parser'
-            )
-        end
-
-        -- Consume the '=' token
-        state:accept('=')
-
-        -- Create a new node for the assignment
-        local assignment_node = {
-            type = 'assignment',
-            name = node,
-        }
-
-        -- Get the value of the assignment
-        assignment_node.right = expression(state)
-        return assignment_node
-    end
-
-    return node
-end
-
-function literal(state)
-    if state:test('number') then
-        return state:accept('number')
-    elseif state:test('string') then
-        return state:accept('string')
-    elseif state:test('true') then
-        return state:accept('true')
-    elseif state:test('false') then
-        return state:accept('false')
-    elseif state:test('null') then
-        return state:accept('null')
-    else
-        return index_expr(state)
-    end
-end
-
-function expression(state)
-    return arity_expr(0, state, false)
-end
-
-function arity_expr(limit, state, precede)
-    local result = {}
-    local unary = unary_expr(state)
-
-    if unary then
-        result = unary(expression(state))
-    else
-        result = literal(state)
-    end
-
-    local binary, precedence = binary_expr(state)
-    -- binary returns a function that takes two arguments and returns the AST node
-
-    while binary do
-        if not precedence then break end
-        if precedence < limit then break end
-
-        local operand, value = arity_expr(precedence, state, true)
-        result = binary(result, value)
-        binary = operand
-    end
-
-    if precede then
-        return binary, result
-    end
-
-    return result
-end
-
-function unary_expr(state)
+local function unary_expr(state)
     if state:test('!') then
         -- Consume the '!' token
         state:accept('!')
@@ -153,13 +23,13 @@ function unary_expr(state)
     end
 end
 
-function binary_expr(state)
+local function binary_expr(state)
     if state:test('==') then
         -- Consume the '==' token
         state:accept('==')
         return function(r, l)
             return {
-                type = 'equal',
+                type = 'exact',
                 left = r,
                 right = l,
             }
@@ -171,7 +41,7 @@ function binary_expr(state)
             return {
                 type = 'not',
                 argument = {
-                    type = 'equal',
+                    type = 'exact',
                     left = r,
                     right = l,
                 }
@@ -291,6 +161,108 @@ function binary_expr(state)
     end
 end
 
+local function expression_stat(state)
+    local node = index_expr(state)
+
+    if state:test('=') then
+        if not node or not node.type == 'identifier' then
+            frog:throw(
+                state.token,
+                'Invalid assignment',
+                'The left side of the assignment must be an identifier',
+                'Parser'
+            )
+        end
+
+        -- Consume the '=' token
+        state:accept('=')
+
+        -- Create a new node for the assignment
+        local assignment_node = {
+            type = 'assignment',
+            name = node,
+        }
+
+        -- Get the value of the assignment
+        assignment_node.value = expression(state)
+        return assignment_node
+    end
+
+    return node
+end
+
+local function array(state)
+    -- Accept the '[' token
+    state:expect('[')
+
+    local node = {
+        type = 'array',
+        elements = {}
+    }
+
+    if state:test(']') then
+        return node
+    end
+
+    repeat
+        table.insert(node.elements, expression(state))
+    until not state:accept(',')
+
+    state:expect(']')
+    return node
+end
+
+local function literal(state)
+    if state:test('number') then
+        return state:accept('number')
+    elseif state:test('string') then
+        return state:accept('string')
+    elseif state:test('true') then
+        return state:accept('true')
+    elseif state:test('false') then
+        return state:accept('false')
+    elseif state:test('null') then
+        return state:accept('null')
+    elseif state:test('[') then
+        return array(state)
+    else
+        return index_expr(state)
+    end
+end
+
+local function arity_expr(limit, state, precede)
+    local result = {}
+    local unary = unary_expr(state)
+
+    if unary then
+        result = unary(expression(state))
+    else
+        result = literal(state)
+    end
+
+    local binary, precedence = binary_expr(state)
+    -- binary returns a local function that takes two arguments and returns the AST node
+
+    while binary do
+        if not precedence then break end
+        if precedence < limit then break end
+
+        local operand, value = arity_expr(precedence, state, true)
+        result = binary(result, value)
+        binary = operand
+    end
+
+    if precede then
+        return binary, result
+    end
+
+    return result
+end
+
+function expression(state)
+    return arity_expr(0, state, false)
+end
+
 function index_expr(state)
     local identifier = identifier_expr(state)
 
@@ -324,7 +296,7 @@ function index_expr(state)
             -- Consume the '(' token
             state:accept('(')
 
-            -- Get the arguments of the function call
+            -- Get the arguments of the local function call
             local args = {}
 
             while not state:test(')') do
@@ -369,7 +341,7 @@ function identifier_expr(state)
 end
 
 -- Handle if statements
-function if_expr(state)
+local function if_expr(state)
     -- Consume the 'if' token
     state:accept('if')
 
@@ -400,7 +372,7 @@ function if_expr(state)
     return node
 end
 
-function elseif_expr(state)
+local function elseif_expr(state)
     -- Consume the 'elseif' token
     state:accept('elseif')
 
@@ -427,7 +399,7 @@ function elseif_expr(state)
     return node
 end
 
-function else_expr(state)
+local function else_expr(state)
     -- Consume the 'else' token
     state:accept('else')
 
@@ -442,7 +414,7 @@ function else_expr(state)
     return node
 end
 
-function while_expr(state)
+local function while_expr(state)
     -- Consume the 'while' token
     state:accept('while')
 
@@ -470,7 +442,7 @@ function while_expr(state)
     return node
 end
 
-function for_expr(state)
+local function for_expr(state)
     -- Consume the 'for' token
     state:accept('for')
 
@@ -501,7 +473,7 @@ function for_expr(state)
     return node
 end
 
-function for_condition(state)
+local function for_condition(state)
     -- Get the identifier of the iterator
     local identifier = state:expect('identifier')
 
@@ -550,7 +522,7 @@ function for_condition(state)
     end
 end
 
-function function_expr(state)
+local function function_expr(state)
     -- Consume the 'function' token
     state:accept('function')
 
@@ -578,19 +550,19 @@ function function_expr(state)
     state:expect('{')
 
     -- Create the body node for the function
-    local node = {
+    local block = {
         type = 'block',
         args = args,
     }
 
-    node.body = statement(state)
+    block.body = statement(state)
     state:expect('}')
 
-    node.right = node.body
+    node.value = block
     return node
 end
 
-function return_expr(state)
+local function return_expr(state)
     -- Consume the 'return' token
     state:accept('return')
 
@@ -598,20 +570,39 @@ function return_expr(state)
     return expression(state)
 end
 
-function break_expr(state)
+local function break_expr(state)
     -- TODO: Add expression to the 'while' and 'for' nodes as an additional condition
     -- TODO: In the symbol resolver, remove the break condition if it is not in the loop
 end
 
-function export_expr(state)
+local function export_expr(state)
     -- TODO: Add export statement
+    state:accept('export')
+    return expression(state)
 end
 
-function import_expr(state)
+local function import_expr(state)
     -- TODO: Add import statement
+    state:accept('import')
+
+    local node = {
+        type = 'import'
+    }
+
+    if state:test('identifier') then
+        node.value = state:accept('identifier')
+    else
+        node.value = array(state)
+    end
+
+    state:expect('from')
+
+    node.file = state:expect('string')
+
+    return node
 end
 
-function local_expr(state)
+local function local_expr(state)
     -- Consume the 'local' token
     state:accept('local')
 
@@ -624,12 +615,12 @@ function local_expr(state)
 
     -- Get the value of the local statement
     state:expect('=')
-    node.right = expression(state)
+    node.value = expression(state)
 
     return node
 end
 
-function const_expr(state)
+local function const_expr(state)
     -- Consume the 'const' token
     state:accept('const')
 
@@ -642,15 +633,66 @@ function const_expr(state)
 
     -- Get the value of the const statement
     state:expect('=')
-    node.right = expression(state)
+    node.value = expression(state)
 
     return node
 end
 
-function null_expr(state)
+local function null_expr(state)
     return {
         type = 'null'
     }
+end
+
+local function statement(state)
+    -- Get the current token from the state variable
+    local token = state.token
+
+    -- Try to fit all tokens into a binary expression
+    if not token or state:test('}') or state:test(')') then
+        -- No token found, just return nil
+        return
+
+        -- Will result in a node with the structure
+        -- { ... left = { ... } right = nil }
+        -- This can be compressed into a single node
+    end
+
+    -- All elements are binary expressions
+    local node = {
+        type = 'expr',
+    }
+
+    -- Get the node of the left side of the expression
+    if state:test('if') then
+        node.left = if_expr(state)
+    elseif state:test('while') then
+        node.left = while_expr(state)
+    elseif state:test('for') then
+        node.left = for_expr(state)
+    elseif state:test('function') then
+        node.left = function_expr(state)
+    elseif state:test('return') then
+        node.left = return_expr(state)
+        return node
+    elseif state:test('break') then
+        node.left = break_expr(state)
+    elseif state:test('export') then
+        node.left = export_expr(state)
+        return node
+    elseif state:test('import') then
+        node.left = import_expr(state)
+    elseif state:test('local') then
+        node.left = local_expr(state)
+    elseif state:test('const') then
+        node.left = const_expr(state)
+    else
+        node.left = expression_stat(state) 
+    end
+
+    -- The right side of the expression is another expression
+    node.right = statement(state)
+    return node
 end
 
 return statement

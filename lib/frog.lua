@@ -103,7 +103,11 @@ function frog:dump(stage, object)
         local file = io.open(self.options['o'], 'w')
 
         if file then
-            file:write(json(object))
+            if type(object) == 'string' then
+                file:write(object)
+            else
+                file:write(json(object))
+            end
         else
             self:error('Could not open file: ' .. self.options['o'])
         end

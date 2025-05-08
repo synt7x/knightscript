@@ -2,7 +2,9 @@ local frog = require('lib/frog')
 local cli = require('src/cli')
 local lexer = require('src/lexer')
 local parser = require('src/parser')
-local symbols = require('src/symbols')
+local transform = require('src/transformer')
+local emit = require('src/emit')
+
 local flags, inputs = cli(arg)
 
 for i, input in ipairs(inputs) do
@@ -18,7 +20,9 @@ for i, input in ipairs(inputs) do
         frog:dump('comments', comments)
 
         local ast = parser.new(flags, tokens, comments)
-        frog:dump('ast', ast)
+        frog:dump('ast', transform(ast))
+
+        frog:dump('knight', emit.new(ast))
         
         
     else
