@@ -1,8 +1,5 @@
-local a = [
-    'string', 'I am a string!'
-]
+local a = []
 
-print(a[1])
-if (a[0] == 'string') {
-    print(a[1])
-}
+set(a, 0, 100)
+
+dump(a)

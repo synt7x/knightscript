@@ -171,13 +171,15 @@ local function expression_stat(state)
     local node = index_expr(state)
 
     if state:test('=') then
-        if not node or not node.type == 'identifier' then
+        if not node or node.type ~= 'identifier' then
             frog:throw(
                 state.token,
-                'Invalid assignment',
-                'The left side of the assignment must be an identifier',
+                'Invalid assignment, the left side of the assignment must be an identifier',
+                node.type == 'index' and 'You probably intended to use the set(array, index, value) function' or 'Try replacing the left side with an identifier',
                 'Parser'
             )
+
+            os.exit(1)
         end
 
         -- Consume the '=' token
@@ -206,7 +208,7 @@ local function array(state)
         elements = {}
     }
 
-    if state:test(']') then
+    if state:accept(']') then
         return node
     end
 
@@ -608,7 +610,7 @@ local function function_expr(state)
         args = args,
     }
 
-    block.body = statement(state)
+    block.body = statement(state) or null_expr()
     state:expect('}')
 
     node.value = block

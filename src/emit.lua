@@ -85,15 +85,6 @@ function emit:walk(ast)
     if traversal.binary[ast.type] then
         self:operator(traversal.binary[ast.type])
         self:walk(ast.left)
-
-        if ast.type == 'expr' then
-            self:build('\n')
-
-            if ast.right.type ~= 'expr' then
-                self:build(':')
-            end
-        end
-        
         self:walk(ast.right)
     elseif self:test('output') then
         self:builtin('O')
@@ -132,6 +123,12 @@ function emit:walk(ast)
         self:walk(ast.argument)
         self:walk(ast.start)
         self:walk(ast.width)
+    elseif self:test('set') then
+        self:builtin('S')
+        self:walk(ast.argument)
+        self:walk(ast.start)
+        self:walk(ast.width)
+        self:walk(ast.value)
     elseif self:test('identifier') then
         self:variable(ast.characters)
     elseif self:test('string') then
@@ -142,6 +139,10 @@ function emit:walk(ast)
         self:operator('@')
     elseif self:test('null') then
         self:builtin('N')
+    elseif self:test('true') then
+        self:builtin('T')
+    elseif self:test('false') then
+        self:builtin('F')
     else
         print(ast.type)
     end

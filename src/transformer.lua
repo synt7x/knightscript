@@ -38,6 +38,47 @@ local function builtin(node)
 
         node.name = nil
         node.args = nil
+    elseif identifier == 'insert' then
+        node.type = 'add'
+        walk(node.args[1])
+        walk(node.args[2])
+
+        node.left = node.args[1] or null()
+        node.right = node.args[2] or null()
+
+        node.name = nil
+        node.args = nil
+    elseif identifier == 'set' then
+        local name = node.args[1] or null()
+        local index = node.args[2] or null()
+        local value = node.args[3] or null()
+
+        local placeholder = {
+            type = 'identifier',
+            characters = '_'
+        }
+
+        node.type = 'expr'
+        node.left = {
+            type = 'assignment',
+            name = placeholder,
+            value = index
+        }
+
+        node.right = {
+            type = 'assignment',
+            name = name,
+            value = {
+                type = 'set',
+                argument = name,
+                value = {
+                    type = 'box',
+                    argument = value
+                },
+                start = placeholder,
+                width = placeholder
+            }
+        }
     elseif identifier == 'length' then
         node.type = 'length'
         walk(node.args[1])
@@ -116,7 +157,6 @@ local function array(node)
 end
 
 function walk(node)
-    print(node.type)
     if node.type == 'expr' then
         if not node.right then
             local left = node.left
@@ -180,7 +220,22 @@ function walk(node)
             type = 'get',
             argument = name,
             start = placeholder,
-            width = placeholder
+            width = {
+                type = 'if',
+                condition = {
+                    type = 'exact',
+                    left = name,
+                    right = {
+                        type = 'number',
+                        characters = '0'
+                    }
+                },
+                body = placeholder,
+                fallback = {
+                    type = 'number',
+                    characters = '1'
+                }
+            }
         }
 
         node.name = nil
