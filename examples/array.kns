@@ -1,2 +1,8 @@
-local a = [1, 2, 3, 4, a, ['b', c]]
-dump(a)
+local a = [
+    'string', 'I am a string!'
+]
+
+print(a[1])
+if (a[0] == 'string') {
+    print(a[1])
+}

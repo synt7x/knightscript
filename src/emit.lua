@@ -39,8 +39,8 @@ function emit:builtin(characters)
 end
 
 function emit:variable(characters)
-    if self.last then
-        --self:build(' ')
+    if self.last == 'variable' then
+        self:build(' ')
     end
 
     self:build(characters)
@@ -71,7 +71,7 @@ function emit:operator(characters)
 end
 
 function emit:number(characters)
-    if self.last == 'variable' then
+    if self.last == 'variable' or self.last == 'number' then
         self:build(' ')
     end
 
@@ -96,37 +96,42 @@ function emit:walk(ast)
         
         self:walk(ast.right)
     elseif self:test('output') then
-        self:builtin('OUTPUT')
+        self:builtin('O')
         self:walk(ast.argument)
-    elseif self:test('output') then
-        self:builtin('DUMP')
+    elseif self:test('dump') then
+        self:builtin('D')
         self:walk(ast.argument)
     elseif self:test('prompt') then
-        self:builtin('PROMPT')
+        self:builtin('P')
     elseif self:test('random') then
-        self:builtin('RANDOM')
+        self:builtin('R')
     elseif traversal.unary[ast.type] then
         self:operator(traversal.unary[ast.type])
         self:walk(ast.argument)
     elseif self:test('block') then
-        self:builtin('BLOCK')
+        self:builtin('B')
         self:walk(ast.body)
     elseif self:test('call') then
-        self:builtin('CALL')
+        self:builtin('C')
         self:walk(ast.name)
     elseif self:test('assignment') then
         self:operator('=')
         self:walk(ast.name)
         self:walk(ast.value)
     elseif self:test('while') then
-        self:builtin('WHILE')
+        self:builtin('W')
         self:walk(ast.condition)
         self:walk(ast.body)
     elseif self:test('if') then
-        self:builtin('IF')
+        self:builtin('I')
         self:walk(ast.condition)
         self:walk(ast.body)
         self:walk(ast.fallback)
+    elseif self:test('get') then
+        self:builtin('G')
+        self:walk(ast.argument)
+        self:walk(ast.start)
+        self:walk(ast.width)
     elseif self:test('identifier') then
         self:variable(ast.characters)
     elseif self:test('string') then
@@ -135,6 +140,8 @@ function emit:walk(ast)
         self:number(ast.characters)
     elseif self:test('array') then
         self:operator('@')
+    elseif self:test('null') then
+        self:builtin('N')
     else
         print(ast.type)
     end
@@ -148,8 +155,6 @@ function format:build(ast)
         end
         self:emit(traversal.binary[ast.type])
         self:build(ast.left)
-
-        print(json(ast))
 
         self:build(ast.right)
     elseif ast.type == 'prime' then

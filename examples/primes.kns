@@ -1,4 +1,3 @@
-import a from "examples/test.kns"
 
 function primes_upto(max) {
     sieve = []

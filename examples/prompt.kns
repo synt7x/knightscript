@@ -1,0 +1,3 @@
+local name = prompt('Enter your name:')
+
+print('Hello ' + name + '!')

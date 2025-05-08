@@ -1,6 +1,12 @@
 local frog = require('lib/frog')
 local json = require('lib/json')
 
+local function null_expr(state)
+    return {
+        type = 'null'
+    }
+end
+
 local function unary_expr(state)
     if state:test('!') then
         -- Consume the '!' token
@@ -442,37 +448,6 @@ local function while_expr(state)
     return node
 end
 
-local function for_expr(state)
-    -- Consume the 'for' token
-    state:accept('for')
-
-    -- Create a new node for the for statement
-    local node = {
-        type = 'expr',
-    }
-
-    -- Create the 'while' part of the for statement
-    local loop_node = {
-        type = 'while',
-    }
-
-    node.right = loop_node
-
-    -- Get the body of the for statement
-    state:expect('(')
-    local initial, condition = for_condition(state)
-    node.left = initial
-    loop_node.condition = condition
-    state:expect(')')
-
-    -- Get the body of the for statement
-    state:expect('{')
-    loop_node.body = statement(state)
-    state:expect('}')
-
-    return node
-end
-
 local function for_condition(state)
     -- Get the identifier of the iterator
     local identifier = state:expect('identifier')
@@ -503,23 +478,101 @@ local function for_condition(state)
             value = 0,
         }
 
-        initial_node.right = number
+        initial_node.value = number
         return initial_node, condition_node
     elseif state:expect('=') then
         -- Consume the '=' token
         state:accept('=')
 
-        initial_node.right = expression(state)
+        initial_node.value = expression(state)
+        
         state:expect(',')
 
         local condition_node = {
             type = 'less',
             left = identifier,
-            right = expression(state),
+            right = {
+                type = 'add',
+                left = expression(state),
+                right = {
+                    type = 'number',
+                    characters = '1'
+                }
+            }
         }
 
-        return initial_node, condition_node
+        local follow_node = {}
+
+        if state:accept(',') then
+            follow_node = {
+                    type = 'assignment',
+                    name = identifier,
+                    value = {
+                        type = 'add',
+                        left = identifier,
+                        right = expression(state)
+                    }
+                }
+        else
+            follow_node = {
+                    type = 'assignment',
+                    name = identifier,
+                    value = {
+                        type = 'add',
+                        left = identifier,
+                        right = {
+                            type = 'number',
+                            characters = '1'
+                        }
+                    }
+            }
+        end
+
+
+        return initial_node, condition_node, follow_node
     end
+end
+
+local function for_expr(state)
+    -- Consume the 'for' token
+    state:accept('for')
+
+    -- Create a new node for the for statement
+    local node = {
+        type = 'expr',
+    }
+
+    -- Create the 'while' part of the for statement
+    local loop_node = {
+        type = 'while',
+    }
+
+    node.right = loop_node
+
+    -- Get the body of the for statement
+    state:expect('(')
+    local initial, condition, follow = for_condition(state)
+    node.left = initial
+    loop_node.condition = condition
+    state:expect(')')
+
+    -- Get the body of the for statement
+    state:expect('{')
+    local body = statement(state)
+    
+    if body then
+        loop_node.body = {
+            type = 'expr',
+            left = body,
+            right = follow
+        }
+    else
+        loop_node.body = follow
+    end
+
+    state:expect('}')
+
+    return node
 end
 
 local function function_expr(state)
@@ -638,13 +691,7 @@ local function const_expr(state)
     return node
 end
 
-local function null_expr(state)
-    return {
-        type = 'null'
-    }
-end
-
-local function statement(state)
+function statement(state)
     -- Get the current token from the state variable
     local token = state.token
 

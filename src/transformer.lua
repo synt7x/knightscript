@@ -2,22 +2,31 @@ local json = require('lib/json')
 local parser = require('src/parser')
 local traversal = parser.traversal
 
+local function null()
+    return {
+        type = 'null'
+    }
+end
+
 local function builtin(node)
     local identifier = node.name.characters
     if identifier == 'print' then
         node.type = 'output'
+        walk(node.args[1])
         node.argument = node.args[1] or null()
         
         node.name = nil
         node.args = nil
     elseif identifier == 'dump' then
         node.type = 'dump'
+        walk(node.args[1])
         node.argument = node.args[1] or null()
             
         node.name = nil
         node.args = nil
     elseif identifier == 'write' then
         node.type = 'output'
+        walk(node.args[1])
         node.argument = {
             type = 'add',
             right = node.args[1] or null(),
@@ -31,6 +40,7 @@ local function builtin(node)
         node.args = nil
     elseif identifier == 'length' then
         node.type = 'length'
+        walk(node.args[1])
         node.argument = node.args[1] or null()
 
         node.name = nil
@@ -41,14 +51,15 @@ local function builtin(node)
         node.args = nil
     elseif identifier == 'prompt' then
         node.type = 'expr'
+        walk(node.args[1])
         node.left = {
             type = 'output',
             argument = {
                 type = 'add',
-                right = node.args[1] or null(),
-                left = {
+                left = node.args[1] or null(),
+                right = {
                     type = 'string',
-                    value = '\\'
+                    characters = ' \\'
                 }
             }
         }
@@ -104,13 +115,8 @@ local function array(node)
     node.elements = nil
 end
 
-local function null()
-    return {
-        type = 'null'
-    }
-end
-
 function walk(node)
+    print(node.type)
     if node.type == 'expr' then
         if not node.right then
             local left = node.left
@@ -151,6 +157,34 @@ function walk(node)
         walk(node.condition)
         walk(node.body)
         walk(node.fallback)
+    elseif node.type == 'get' then
+        walk(node.argument)
+        walk(node.start)
+        walk(node.width)
+    elseif node.type == 'index' then
+        local name = node.name
+        local index = node.value
+
+        local placeholder = {
+            type = 'identifier',
+            characters = '_'
+        }
+
+        node.type = 'expr'
+        node.left = {
+            type = 'assignment',
+            name = placeholder,
+            value = index
+        }
+        node.right = {
+            type = 'get',
+            argument = name,
+            start = placeholder,
+            width = placeholder
+        }
+
+        node.name = nil
+        node.value = nil
     elseif node.type == 'array' then
         array(node)
     end

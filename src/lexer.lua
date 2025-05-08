@@ -79,7 +79,7 @@ function lexer:step(character, peek)
 			return 
 		end
 	elseif self.token.type == 'number' then
-		if code >= 47 and code < 59 or character == '_' or character == 'e' or character == 'E' and not self.token.scientific then
+		if code > 47 and code < 59 or character == '_' or character == 'e' or character == 'E' and not self.token.scientific then
 			if character == 'e' or character == 'E' then
 				self.token.scientific = character
 			end
