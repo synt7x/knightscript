@@ -172,6 +172,8 @@ local function expression_stat(state)
 
     if state:test('=') then
         if not node or node.type ~= 'identifier' then
+            -- TODO: I think it may be possible to resolve the index into a set call
+            -- I will work on this when I have time
             frog:throw(
                 state.token,
                 'Invalid assignment, the left side of the assignment must be an identifier',
