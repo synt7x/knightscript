@@ -1,4 +1,5 @@
 local lexer = {}
+local frog = require('lib/frog')
 
 lexer.reserved = {
     ['for'] = true,
@@ -27,10 +28,16 @@ function lexer.new(input)
 	end
 
 	self.tokens = {}
-	self.token = {}
+	self.token = {
+		position = { frog.line, frog.char, file = frog.file }
+	}
     self.comments = {}
 	
 	if not input then return end
+
+	for line in input:gmatch("([^\n]*)\n?") do
+        table.insert(frog:getLines(), line or '')
+    end
 
 	for i = 1, #input do
 		self:step(input:sub(i, i), input:sub(i + 1, i + 1))
@@ -65,7 +72,9 @@ function lexer:step(character, peek)
             end
             
 			table.insert(self.tokens, self.token)
-			self.token = {}
+			self.token = {
+				position = { frog.line, frog.char, file = frog.file }
+			}
 			self:type(character, peek)
 			return 
 		end
@@ -77,14 +86,18 @@ function lexer:step(character, peek)
 			self.token.string = self.token.string .. character
 		else
 			table.insert(self.tokens, self.token)
-			self.token = {}
+			self.token = {
+				position = { frog.line, frog.char, file = frog.file }
+			}
 			self:type(character, peek)
 			return 
 		end
 	elseif self.token.type == 'string' then
 		if character == self.token.delimiter and not self.token.escaped then
 			table.insert(self.tokens, self.token)
-			self.token = {}
+			self.token = {
+				position = { frog.line, frog.char, file = frog.file }
+			}
 		else
 			self.token.string = self.token.string .. character
 		end
@@ -97,22 +110,37 @@ function lexer:step(character, peek)
 		self.token.string = self.token.string .. character
 		self.token.type = self.token.string
 		table.insert(self.tokens, self.token)
-		self.token = {}
+		self.token = {
+			position = { frog.line, frog.char, file = frog.file }
+		}
 		return 
 	elseif self.token.type == 'comment' then
 		if character ~= '\n' then
 			self.token.string = self.token.string .. character
 		else
 			table.insert(self.comments, self.token)
-			self.token = {}
+			frog:newline()
+			self.token = {
+				position = { frog.line, frog.char, file = frog.file }
+			}
 		end
 	end
+
+	frog:character()
 end
 
 function lexer:type(character, peek)
+	self.token = {
+		position = { frog.line, frog.char, file = frog.file }
+	}
+
 	local code = string.byte(character)
-	if character == ' ' or character == '\t' or character == '\n' or character == '\r' then
-		return 
+	if character == ' ' or character == '\t' or character == '\r' then
+		frog:character()
+		return
+	elseif character == '\n' then
+		frog:newline()
+		return
 	elseif character == '"' or character == "'" then
 		self.token.type = 'string'
 		self.token.string = ''
@@ -133,7 +161,8 @@ function lexer:type(character, peek)
 		else
 			table.insert(self.tokens, {
 				type = character,
-				string = character
+				string = character,
+				position = { frog.line, frog.char, file = frog.file }
 			})
 		end
 	elseif character == '+' or character == '-' or character == '&' or character == '|' then
@@ -146,15 +175,19 @@ function lexer:type(character, peek)
 		else
 			table.insert(self.tokens, {
 				type = character,
-				string = character
+				string = character,
+				position = { frog.line, frog.char, file = frog.file }
 			})
 		end
 	else
 		table.insert(self.tokens, {
 			type = character,
-			string = character
+			string = character,
+			position = { frog.line, frog.char, file = frog.file }
 		})
 	end
+
+	frog:character()
 end
 
 return lexer

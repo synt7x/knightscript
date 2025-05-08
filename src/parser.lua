@@ -1,10 +1,11 @@
 local config = require('config')
 local frog = require('lib/frog')
-local program = require('src/frontend/nodes/program')
+local json = require('lib/json')
 
 local parser = {}
+local tree = require('src/tree')
 
-function parser.new(tokens, flags, comments)
+function parser.new(flags, tokens, comments)
 	local self = {}
 	for name, value in pairs(parser) do
 		self[name] = value
@@ -22,7 +23,20 @@ function parser.new(tokens, flags, comments)
     self.token = self.tokens[self.index]
 	self.ancestory = {}
 	self.node = self.tree
-	return program.ast(self)
+	self.node.body = tree(self)
+
+	if self.token then
+		frog:throw(
+			self.token,
+			'Extraneous token following body',
+			'Try removing this token or inserting a ";" prior',
+			'Parser'
+		)
+
+		os.exit(1)
+	end
+
+	return self.tree
 end
 
 function parser:skip()
@@ -78,14 +92,26 @@ function parser:expect(tokenType, tokenString)
 	end
 
     if not self.token then
-        frog:croak('Expected ' .. tokenType .. ' but got EOF')
+        frog:throw(
+			self.tokens[self.index - 1],
+			'Expected ' .. tokenType .. ' but got EOF',
+			'Add a ' .. tokenType .. ' to satisfy the parser'
+		)
         os.exit(1)
     end
 
 	if tokenString then
-		frog:croak('Expected ' .. tokenType .. " '" .. tokenString .. "' but got " .. self.token.type .. " '" .. self.token.string .. "'")
+		frog:throw(
+			self.token,
+			'Expected ' .. tokenType .. ' "' .. tokenString .. '" but got ' .. self.token.type .. " '" .. self.token.string .. "'",
+			'Replace this with "' .. tokenString .. '"'
+		)
 	else
-		frog:croak('Expected ' .. tokenType .. ' but got ' .. self.token.type)
+		frog:throw(
+			self.token,
+			'Expected ' .. tokenType .. ' but got ' .. self.token.type,
+			'Use ' .. tokenType .. ' here instead of ' .. self.token.type
+		)
 	end
 
     while not self:accept(tokenType, tokenString) do
@@ -100,6 +126,7 @@ function parser:enter(node, body)
 		self.tree,
 		self.node
 	})
+
 	self.tree = body
 	self.node = node
 end
@@ -109,5 +136,25 @@ function parser:exit()
 	self.tree = ancestor[1]
 	self.node = ancestor[2]
 end
+
+parser.traversal = {
+    binary = {
+        ['add'] = '+', ['subtract'] = '-', ['multiply'] = '*', ['divide'] = '/',
+        ['expr'] = ';', ['exact'] = '?', ['and'] = '&', ['or'] = '|',
+        ['less'] = '<', ['greater'] = '>', ['modulus'] = '%', ['exponent'] = '^'
+    },
+
+    unary = {
+        ['quit'] = 'Q', ['output'] = 'O', ['dump'] = 'D',
+        ['length'] = 'L', ['not'] = '!', ['prime'] = '[',
+        ['ultimate'] = ']', ['box'] = ',', ['ascii'] = 'A',
+        ['negative'] = '~'
+    },
+
+    literal = {
+        ['number'] = true, ['string'] = true, ['array'] = true,
+        ['boolean'] = true, ['null'] = true
+    }
+}
 
 return parser

@@ -7,7 +7,7 @@ function fib(n) {
         tmp = b
         b = a + tmp
         a = tmp
-        n--
+        n = n - 1
     }
 
     return a

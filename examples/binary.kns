@@ -1,0 +1,6 @@
+a = b
+tmp = c
+
+while (a != b) {
+    tmp = a
+}
