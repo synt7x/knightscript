@@ -39,14 +39,20 @@ local function builtin(node)
         node.name = nil
         node.args = nil
     elseif identifier == 'insert' then
-        node.type = 'add'
+        node.type = 'assignment'
         walk(node.args[1])
         walk(node.args[2])
 
-        node.left = node.args[1] or null()
-        node.right = node.args[2] or null()
+        node.value = {
+            type = 'add',
+            left = node.args[1] or null(),
+            right = {
+                type = 'box',
+                argument = node.args[2] or null()
+            }
+        }
 
-        node.name = nil
+        node.name = node.args[1] or null()
         node.args = nil
     elseif identifier == 'set' then
         local name = node.args[1] or null()
@@ -79,6 +85,17 @@ local function builtin(node)
                 width = placeholder
             }
         }
+    elseif identifier == 'join' then
+        node.type = 'exponent'
+
+        walk(node.args[1])
+        walk(node.args[2])
+
+        node.left = node.args[1] or null()
+        node.right = node.args[2] or null()
+
+        node.name = nil
+        node.args = nil
     elseif identifier == 'length' then
         node.type = 'length'
         walk(node.args[1])

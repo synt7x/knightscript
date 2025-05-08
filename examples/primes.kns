@@ -1,25 +1,8 @@
+local max = 0 + prompt('max:')
 
-function primes_upto(max) {
-    sieve = []
-    primes = []
-
-    for (i = 2, max) {
-        insert(sieve, false)
-    }
-
-    for (i = 2, max) {
-        if (!sieve[i]) {
-            insert(primes, i)
-
-            for (j = i ^ 2, max, i) {
-                sieve[j] = true
-            }
-        }
-    }
-
-    return primes
+local all = []
+while (max >= length(all)) {
+    insert(all, length(all))
 }
 
-max = number(prompt("Enter a number:"))
-print("the primes from 2-" + max + "are:")
-print(join(primes_upto(max), " "))
+dump(all)

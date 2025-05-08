@@ -75,14 +75,27 @@ local function binary_expr(state)
         return function(r, l)
             return {
                 type = 'greater',
-                left = r,
-                right = l,
+                left = l,
+                right = r,
             }
         end, 3
     elseif state:test('>=') then
         -- Consume the '>=' token
         state:accept('>=')
         return function(r, l)
+            return {
+                type = 'or',
+                left = {
+                    type = 'greater',
+                    left = l,
+                    right = r
+                },
+                right = {
+                    type = 'exact',
+                    left = l,
+                    right = r
+                }
+            }
         end, 3
     elseif state:test('&&') then
         -- Consume the '&&' token
@@ -258,7 +271,7 @@ local function arity_expr(limit, state, precede)
         if precedence < limit then break end
 
         local operand, value = arity_expr(precedence, state, true)
-        result = binary(result, value)
+        result = binary(value, result)
         binary = operand
     end
 
