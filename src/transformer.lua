@@ -2,6 +2,83 @@ local json = require('lib/json')
 local parser = require('src/parser')
 local traversal = parser.traversal
 
+local symbols = {}
+local void = {
+    type = 'identifier',
+    characters = '_'
+}
+
+local function get_unique(symbols, index)
+    if not index then
+        if not symbols['_'] then
+            return '_'
+        elseif not symbols['v'] then
+            return 'v'
+        elseif not symbols['void'] then
+            return 'void'
+        end
+    end
+
+    local n = 0
+    local identifier = '_'
+
+    while symbols[identifier] do
+        identifier = '_' .. n
+        n = n + 1
+    end
+
+    if index then
+        identifier = '_' .. '_' .. index
+    else
+        return identifier
+    end
+
+    n = 0
+
+    while symbols[identifier] do
+        identifier = '_' .. n .. '_' .. index
+        n = n + 1
+    end
+
+    return identifier
+end
+
+function rename(ast, identifier, target)
+    if traversal.binary[ast.type] then
+        rename(ast.left, identifier, target)
+        rename(ast.right, identifier, target)
+    elseif traversal.unary[ast.type] then
+        rename(ast.argument, identifier, target)
+    elseif ast.type == 'block' then
+        rename(ast.body, identifier, target)
+    elseif ast.type == 'call' then
+        rename(ast.name, identifier, target)
+    elseif ast.type == 'assignment' then
+        rename(ast.name, identifier, target)
+        rename(ast.value, identifier, target)
+    elseif ast.type == 'while' then
+        rename(ast.condition, identifier, target)
+        rename(ast.body, identifier, target)
+    elseif ast.type == 'if' then
+        rename(ast.condition, identifier, target)
+        rename(ast.body, identifier, target)
+        rename(ast.fallback, identifier, target)
+    elseif ast.type == 'get' then
+        rename(ast.argument, identifier, target)
+        rename(ast.start, identifier, target)
+        rename(ast.width, identifier, target)
+    elseif ast.type == 'set' then
+        rename(ast.argument, identifier, target)
+        rename(ast.start, identifier, target)
+        rename(ast.width, identifier, target)
+        rename(ast.value, identifier, target)
+    elseif ast.type == 'identifier' then
+        if ast.characters == identifier.characters then
+            ast.characters = target
+        end
+    end
+end
+
 local function null()
     return {
         type = 'null'
@@ -9,10 +86,7 @@ local function null()
 end
 
 local function builtin(node)
-    local placeholder = {
-        type = 'identifier',
-        characters = '_'
-    }
+    local placeholder = void
 
     local identifier = node.name.characters
     if identifier == 'print' then
@@ -88,6 +162,9 @@ local function builtin(node)
                 }
             }
         }
+
+        node.args = nil
+        node.name = nil
     elseif identifier == 'join' then
         node.type = 'exponent'
 
@@ -265,6 +342,9 @@ local function array(node)
 end
 
 function walk(node)
+    if not node then return end
+    local placeholder = void
+
     if node.type == 'expr' then
         if not node.right then
             local left = node.left
@@ -296,8 +376,39 @@ function walk(node)
         else
             walk(node.name)
         end
+
+        if node.args and #node.args > 0 then
+            local name = node.name
+            node.name = nil
+
+            for i, arg in ipairs(node.args) do
+                walk(arg)
+
+                node.type = 'expr'
+                node.left = {
+                    type = 'assignment',
+                    name = {
+                        type = 'identifier',
+                        characters = get_unique(symbols, i)
+                    },
+                    value = arg
+                }
+
+                node.right = {
+                    type = 'call'
+                }
+
+                node = node.right
+            end
+
+            node.name = name
+        end
     elseif node.type == 'block' then
         walk(node.body)
+        for i, arg in ipairs(node.args) do
+            local name = get_unique(symbols, i)
+            rename(node.body, arg, name)
+        end
     elseif node.type == 'while' then
         walk(node.condition)
         walk(node.body)
@@ -310,34 +421,24 @@ function walk(node)
         walk(node.start)
         walk(node.width)
     elseif node.type == 'index' then
+        walk(node.name)
+        walk(node.value)
+
         local name = node.name
         local index = node.value
 
-        node.type = 'expr'
-        node.left = {
-            type = 'assignment',
-            name = placeholder,
-            value = index
-        }
-        node.right = {
+        node.type = 'prime'
+        node.argument = {
             type = 'get',
             argument = name,
-            start = placeholder,
+            start = {
+                type = 'assignment',
+                name = placeholder,
+                value = index
+            },
             width = {
-                type = 'if',
-                condition = {
-                    type = 'exact',
-                    left = name,
-                    right = {
-                        type = 'number',
-                        characters = '0'
-                    }
-                },
-                body = placeholder,
-                fallback = {
-                    type = 'number',
-                    characters = '1'
-                }
+                type = 'number',
+                characters = '1'
             }
         }
 
@@ -350,7 +451,10 @@ function walk(node)
     return node
 end
 
-local function transform(ast)
+local function transform(ast, st)
+    symbols = st
+    void.characters = get_unique(symbols)
+
     ast.body = walk(ast.body)
     return ast
 end

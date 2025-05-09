@@ -409,7 +409,9 @@ function identifier_expr(state)
         state:expect(')')
         return expr
     elseif state:test('identifier') then
-        return state:expect('identifier')
+        local identifier = state:expect('identifier')
+        state:symbol(identifier)
+        return identifier
     end
 end
 
@@ -518,6 +520,7 @@ end
 local function for_condition(state)
     -- Get the identifier of the iterator
     local identifier = state:expect('identifier')
+    state:symbol(identifier)
 
     -- Create a new node for the for condition
     local initial_node = {
@@ -652,6 +655,8 @@ local function function_expr(state)
         name = state:expect('identifier'),
     }
 
+    state:symbol(node.name)
+
     -- Get the arguments of the function
     state:expect('(')
 
@@ -659,6 +664,8 @@ local function function_expr(state)
 
     while state:test('identifier') do
         local arg = state:expect('identifier')
+        state:symbol(arg)
+
         table.insert(args, arg)
         if not state:test(',') then
             break
@@ -733,6 +740,8 @@ local function local_expr(state)
         scoped = true,
     }
 
+    state:symbol(node.name)
+
     -- Get the value of the local statement
     state:expect('=')
     node.value = expression(state)
@@ -750,6 +759,8 @@ local function const_expr(state)
         name = state:expect('identifier'),
         scoped = true,
     }
+
+    state:symbol(node.name)
 
     -- Get the value of the const statement
     state:expect('=')

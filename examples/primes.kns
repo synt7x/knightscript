@@ -1,26 +1,30 @@
-local max = number(prompt('max:'))
-local all = []
+function get_primes(max) {
+    local all = []
 
-for (i = 0, max) {
-    insert(all, i)
-}
-
-for (cur = 2, max) {
-    for (mul = 2 * cur, max, cur) {
-        set(all, mul, 0)
-    }
-}
-
-local primes = []
-all = tail(tail(all))
-
-while (all) {
-    local first = head(all)
-    if (first) {
-        insert(primes, first)
+    for (cur = 0, max) {
+        insert(all, cur)
     }
 
-    pop(all)
+    for (cur = 2, max) {
+        for (mul = 2 * cur, max, cur) {
+            set(all, mul, 0)
+        }
+    }
+
+    local primes = []
+    all = tail(tail(all))
+
+    while (all) {
+        local first = head(all)
+        if (first) {
+            insert(primes, first)
+        }
+
+        pop(all)
+    }
+
+    return primes
 }
 
-dump(primes)
+local b = get_primes(get_primes(20)[7] + 100)
+dump(b)

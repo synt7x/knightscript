@@ -19,8 +19,8 @@ for i, input in ipairs(inputs) do
         frog:dump('tokens', tokens)
         frog:dump('comments', comments)
 
-        local ast = parser.new(flags, tokens, comments)
-        frog:dump('ast', transform(ast))
+        local ast, symbols = parser.new(flags, tokens, comments)
+        frog:dump('ast', transform(ast, symbols))
 
         frog:dump('knight', emit.new(ast, flags))
     else

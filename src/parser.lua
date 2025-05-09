@@ -22,6 +22,7 @@ function parser.new(flags, tokens, comments)
 
     self.token = self.tokens[self.index]
 	self.ancestory = {}
+	self.symbols = {}
 	self.node = self.tree
 	self.node.body = tree(self)
 
@@ -36,7 +37,11 @@ function parser.new(flags, tokens, comments)
 		os.exit(1)
 	end
 
-	return self.tree
+	return self.tree, self.symbols
+end
+
+function parser:symbol(identifier)
+	self.symbols[identifier.characters] = true
 end
 
 function parser:skip()

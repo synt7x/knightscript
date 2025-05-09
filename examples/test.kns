@@ -1,5 +1,2 @@
-import [a, b] from 'examples/test.kns'
-
-a = 1
-
-export a
+local a = [5, 4, 3]
+dump(a[0])
