@@ -1,4 +1,4 @@
-# My fibbonaci program
+-- My fibbonaci program
 function fib(n) {
     local a = 0
     local b = 1
@@ -12,5 +12,5 @@ function fib(n) {
 
     return a
 }
-
+local n = number(prompt('Target Number:'))
 print(fib(50))

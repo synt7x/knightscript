@@ -125,7 +125,7 @@ function emit:walk(ast, root)
         self:builtin('DUMP')
         self:walk(ast.argument)
     elseif self:test('prompt') then
-        self:builtin('PROMP')
+        self:builtin('PROMPT')
     elseif self:test('random') then
         self:builtin('RANDOM')
     elseif traversal.unary[ast.type] then
