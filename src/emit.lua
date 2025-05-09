@@ -142,7 +142,9 @@ function emit:walk(ast, root)
     elseif self:test('assignment') then
         self:operator('=')
         self:walk(ast.name)
+        self:indent()
         self:walk(ast.value)
+        self:dedent()
     elseif self:test('while') then
         self:builtin('WHILE')
         self:walk(ast.condition)

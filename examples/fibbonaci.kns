@@ -12,5 +12,6 @@ function fib(n) {
 
     return a
 }
+
 local n = number(prompt('Target Number:'))
 print(fib(50))
