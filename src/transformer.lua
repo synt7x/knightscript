@@ -9,6 +9,11 @@ local function null()
 end
 
 local function builtin(node)
+    local placeholder = {
+        type = 'identifier',
+        characters = '_'
+    }
+
     local identifier = node.name.characters
     if identifier == 'print' then
         node.type = 'output'
@@ -59,11 +64,6 @@ local function builtin(node)
         local index = node.args[2] or null()
         local value = node.args[3] or null()
 
-        local placeholder = {
-            type = 'identifier',
-            characters = '_'
-        }
-
         node.type = 'expr'
         node.left = {
             type = 'assignment',
@@ -82,7 +82,10 @@ local function builtin(node)
                     argument = value
                 },
                 start = placeholder,
-                width = placeholder
+                width = {
+                    type = 'number',
+                    characters = '1'
+                }
             }
         }
     elseif identifier == 'join' then
@@ -100,6 +103,70 @@ local function builtin(node)
         node.type = 'length'
         walk(node.args[1])
         node.argument = node.args[1] or null()
+
+        node.name = nil
+        node.args = nil
+    elseif identifier == 'tail' then
+        node.type = 'ultimate'
+        walk(node.args[1])
+        node.argument = node.args[1] or null()
+
+        node.name = nil
+        node.args = nil
+    elseif identifier == 'head' then
+        node.type = 'prime'
+        walk(node.args[1])
+        node.argument = node.args[1] or null()
+
+        node.name = nil
+        node.args = nil
+    elseif identifier == 'push' then
+        walk(node.args[1])
+        walk(node.args[2])
+
+        local name = node.args[1] or null()
+        local value = node.args[2] or null()
+
+        node.type = 'assignment'
+
+        node.name = name
+        node.value = {
+            type = 'add',
+            left = {
+                type = 'box',
+                argument = value
+            },
+            right = name
+        }
+
+        node.args = nil
+    elseif identifier == 'pop' then
+        walk(node.args[1])
+
+        local name = node.args[1] or null()
+        node.type = 'expr'
+
+        node.left = {
+            type = 'assignment',
+            name = placeholder,
+            value = {
+                type = 'prime',
+                argument = name
+            }
+        }
+
+        node.right = {
+            type = 'expr',
+            left = {
+                type = 'assignment',
+                name = name,
+                value = {
+                    type = 'ultimate',
+                    argument = name
+                }
+            },
+            right = placeholder
+        }
 
         node.name = nil
         node.args = nil
@@ -126,6 +193,30 @@ local function builtin(node)
             type = 'prompt'
         }
 
+        node.name = nil
+        node.args = nil
+    elseif identifier == 'string' then
+        node.type = 'add'
+        node.left = {
+            type = 'string',
+            characters = ''
+        }
+
+        walk(node.args[1])
+        node.right = node.args[1] or null()
+
+        node.name = nil
+        node.args = nil
+    elseif identifier == 'number' then
+        node.type = 'add'
+        node.left = {
+            type = 'number',
+            characters = '0'
+        }
+
+        walk(node.args[1])
+        node.right = node.args[1] or null()
+        
         node.name = nil
         node.args = nil
     end
@@ -221,11 +312,6 @@ function walk(node)
     elseif node.type == 'index' then
         local name = node.name
         local index = node.value
-
-        local placeholder = {
-            type = 'identifier',
-            characters = '_'
-        }
 
         node.type = 'expr'
         node.left = {

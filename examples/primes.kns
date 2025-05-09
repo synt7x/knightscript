@@ -1,8 +1,26 @@
-local max = 0 + prompt('max:')
-
+local max = number(prompt('max:'))
 local all = []
-while (max >= length(all)) {
-    insert(all, length(all))
+
+for (i = 0, max) {
+    insert(all, i)
 }
 
-dump(all)
+for (cur = 2, max) {
+    for (mul = 2 * cur, max, cur) {
+        set(all, mul, 0)
+    }
+}
+
+local primes = []
+all = tail(tail(all))
+
+while (all) {
+    local first = head(all)
+    if (first) {
+        insert(primes, first)
+    }
+
+    pop(all)
+}
+
+dump(primes)

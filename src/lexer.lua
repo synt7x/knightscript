@@ -64,7 +64,7 @@ function lexer:step(character, peek)
 
 	local code = string.byte(character)
 	if self.token.type == 'identifier' then
-		if character == '_' or code >= 97 and code < 123 or code >= 65 and code < 91 or code >= 47 and code < 59 then
+		if character == '_' or code >= 97 and code < 123 or code >= 47 and code < 59 then
 			self.token.characters = self.token.characters .. character
 		else
             if self.reserved[self.token.characters] then
@@ -79,11 +79,10 @@ function lexer:step(character, peek)
 			return 
 		end
 	elseif self.token.type == 'number' then
-		if code > 47 and code < 59 or character == '_' or character == 'e' or character == 'E' and not self.token.scientific then
-			if character == 'e' or character == 'E' then
-				self.token.scientific = character
+		if code > 47 and code < 59 or character == '_' then
+			if character ~= '_' then
+				self.token.characters = self.token.characters .. character
 			end
-			self.token.characters = self.token.characters .. character
 		else
 			table.insert(self.tokens, self.token)
 			self.token = {
@@ -115,7 +114,9 @@ function lexer:step(character, peek)
 		}
 		return 
 	elseif self.token.type == 'comment' then
-		if character ~= '\n' then
+		if #self.token.characters == 0 and character == '-' then
+			return
+		elseif character ~= '\n' then
 			self.token.characters = self.token.characters .. character
 		else
 			table.insert(self.comments, self.token)
@@ -145,16 +146,20 @@ function lexer:type(character, peek)
 		self.token.type = 'string'
 		self.token.characters = ''
 		self.token.delimiter = character
-	elseif character == '_' or code >= 97 and code < 123 or code >= 65 and code < 91 then
+	elseif character == '_' or code >= 97 and code < 123 then
 		self.token.type = 'identifier'
 		self.token.characters = character
+	elseif code >= 65 and code < 91 then
+		frog:throw(
+			self.token,
+			'Identifiers can only be lowercase', 'Change this uppercase character to lowercase'
+		)
+
+		os.exit(1)
 	elseif code >= 48 and code < 58 then
 		self.token.type = 'number'
 		self.token.characters = character
-	elseif character == '#' then
-		self.token.type = 'comment'
-		self.token.characters = ''
-	elseif character == '*' or character == '/' or character == '%' or character == '^' or character == '!' or character == '=' or character == '>' or character == '<' then
+	elseif character == '*' or character == '/' or character == '%' or character == '^' or character == '!' or character == '=' or character == '>' or character == '<' or character == '#' then
 		if peek == '=' then
 			self.token.type = 'compound'
 			self.token.characters = character
@@ -166,12 +171,12 @@ function lexer:type(character, peek)
 			})
 		end
 	elseif character == '+' or character == '-' or character == '&' or character == '|' then
-		if peek == character then
-			self.token.type = 'double'
-			self.token.characters = character
-		elseif peek == '=' then
+		if peek == '=' then
 			self.token.type = 'compound'
 			self.token.characters = character
+		elseif character == '-' and peek == '-' then
+			self.token.type = 'comment'
+			self.token.characters = ''
 		else
 			table.insert(self.tokens, {
 				type = character,

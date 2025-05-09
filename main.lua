@@ -22,9 +22,7 @@ for i, input in ipairs(inputs) do
         local ast = parser.new(flags, tokens, comments)
         frog:dump('ast', transform(ast))
 
-        frog:dump('knight', emit.new(ast))
-        
-        
+        frog:dump('knight', emit.new(ast, flags))
     else
         frog:croak('Could not open file: ' .. input)
     end

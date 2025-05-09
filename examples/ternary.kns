@@ -1,0 +1,5 @@
+local a = true
+print(a ? 'Hello' : 'Goodbye')
+
+a = false
+print(a ? 'Hello' : 'Goodbye')

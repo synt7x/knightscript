@@ -26,6 +26,15 @@ local function unary_expr(state)
                 argument = v
             }
         end
+    elseif state:test('#') then
+        -- Consume the '#' token
+        state:accept('#')
+        return function(v)
+            return {
+                type = 'length',
+                argument = v
+            }
+        end
     end
 end
 
@@ -36,8 +45,8 @@ local function binary_expr(state)
         return function(r, l)
             return {
                 type = 'exact',
-                left = r,
-                right = l,
+                left = l,
+                right = r,
             }
         end, 3
     elseif state:test('!=') then
@@ -48,8 +57,8 @@ local function binary_expr(state)
                 type = 'not',
                 argument = {
                     type = 'exact',
-                    left = r,
-                    right = l,
+                    left = l,
+                    right = r,
                 }
             }
         end, 3
@@ -59,8 +68,8 @@ local function binary_expr(state)
         return function(r, l)
             return {
                 type = 'less',
-                left = r,
-                right = l,
+                left = l,
+                right = r,
             }
         end, 3
     elseif state:test('<=') then
@@ -103,8 +112,8 @@ local function binary_expr(state)
         return function(r, l)
             return {
                 type = 'and',
-                left = r,
-                right = l,
+                left = l,
+                right = r,
             }
         end, 2
     elseif state:test('||') then
@@ -113,8 +122,28 @@ local function binary_expr(state)
         return function(r, l)
             return {
                 type = 'or',
-                left = r,
-                right = l,
+                left = l,
+                right = r,
+            }
+        end, 1
+    elseif state:test('&') then
+        -- Consume the '&&' token
+        state:accept('&')
+        return function(r, l)
+            return {
+                type = 'and',
+                left = l,
+                right = r,
+            }
+        end, 2
+    elseif state:test('|') then
+        -- Consume the '||' token
+        state:accept('|')
+        return function(r, l)
+            return {
+                type = 'or',
+                left = l,
+                right = r,
             }
         end, 1
     elseif state:test('+') then
@@ -123,8 +152,8 @@ local function binary_expr(state)
         return function(r, l)
             return {
                 type = 'add',
-                left = r,
-                right = l,
+                left = l,
+                right = r,
             }
         end, 10
     elseif state:test('-') then
@@ -133,8 +162,8 @@ local function binary_expr(state)
         return function(r, l)
             return {
                 type = 'subtract',
-                left = r,
-                right = l,
+                left = l,
+                right = r,
             }
         end, 10
     elseif state:test('*') then
@@ -143,8 +172,8 @@ local function binary_expr(state)
         return function(r, l)
             return {
                 type = 'multiply',
-                left = r,
-                right = l,
+                left = l,
+                right = r,
             }
         end, 11
     elseif state:test('/') then
@@ -153,8 +182,8 @@ local function binary_expr(state)
         return function(r, l)
             return {
                 type = 'divide',
-                left = r,
-                right = l,
+                left = l,
+                right = r,
             }
         end, 11
     elseif state:test('%') then
@@ -163,8 +192,8 @@ local function binary_expr(state)
         return function(r, l)
             return {
                 type = 'modulus',
-                left = r,
-                right = l,
+                left = l,
+                right = r,
             }
         end, 11
     elseif state:test('^') then
@@ -173,8 +202,8 @@ local function binary_expr(state)
         return function(r, l)
             return {
                 type = 'exponent',
-                left = r,
-                right = l,
+                left = l,
+                right = r,
             }
         end, 14
     end
@@ -209,6 +238,11 @@ local function expression_stat(state)
         -- Get the value of the assignment
         assignment_node.value = expression(state)
         return assignment_node
+    end
+    
+    if not node then
+        print(json(state.token))
+        node = expression(state)
     end
 
     return node
@@ -277,6 +311,22 @@ local function arity_expr(limit, state, precede)
 
     if precede then
         return binary, result
+    end
+
+    if state:accept('?') then
+        local node = {
+            type = 'or',
+            left = {
+                type = 'and',
+                left = result,
+                right = expression(state)
+            }
+        }
+
+        state:expect(':')
+        node.right = expression(state)
+
+        return node
     end
 
     return result

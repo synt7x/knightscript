@@ -4,7 +4,7 @@ local json = require('lib/json')
 local parser = require('src/parser')
 local traversal = parser.traversal
 
-function emit.new(ast)
+function emit.new(ast, flags)
     local self = {}
     for name, value in pairs(emit) do
         self[name] = value
@@ -12,8 +12,11 @@ function emit.new(ast)
 
     self.buffer = ''
     self.node = ast.body
+    self.tabs = 0
 
-    self:walk(self.node)
+    self.minify = flags.m
+
+    self:walk(self.node, true)
 
     return self.buffer
 end
@@ -28,19 +31,42 @@ function emit:build(characters)
     self.buffer = self.buffer .. characters
 end
 
+function emit:indent()
+    self.tabs = self.tabs + 1
+end
+
+function emit:dedent()
+    self.tabs = self.tabs - 1
+end
+
+function emit:line()
+    if not self.minify then
+        self:build('\n')
+        self:build(string.rep('\t', self.tabs))
+    end
+end
+
+function emit:space()
+    self:build(' ')
+end
+
 function emit:builtin(characters)
-    if self.last then
-        --self:build(' ')
+    if self.last == 'builtin' or not self.minify then
+        self:space()
     end
 
-    self:build(characters)
+    if not self.minify then
+        self:build(characters)
+    else
+        self:build(characters:sub(1, 1))
+    end
         
     self.last = 'builtin'
 end
 
 function emit:variable(characters)
-    if self.last == 'variable' then
-        self:build(' ')
+    if self.last == 'variable' or not self.minify then
+        self:space()
     end
 
     self:build(characters)
@@ -49,8 +75,8 @@ function emit:variable(characters)
 end
 
 function emit:string(characters, delimiter)
-    if self.last then
-        --self:build(' ')
+    if not self.minify then
+        self:space()
     end
 
     self:build(delimiter or '"')
@@ -61,8 +87,8 @@ function emit:string(characters, delimiter)
 end
 
 function emit:operator(characters)
-    if self.last and characters ~= ';' then
-        --self:build(' ')
+    if self.last and not self.minify and characters ~= ';' then
+        self:space()
     end
 
     self:build(characters)
@@ -71,60 +97,72 @@ function emit:operator(characters)
 end
 
 function emit:number(characters)
-    if self.last == 'variable' or self.last == 'number' then
-        self:build(' ')
+    if self.last == 'variable' or self.last == 'number' or not self.minify then
+        self:space()
     end
 
     self:build(characters)
     self.last = 'number'
 end
 
-function emit:walk(ast)
+function emit:walk(ast, root)
     self.node = ast
 
     if traversal.binary[ast.type] then
+        if ast.type == 'expr' and not root then
+            if ast.left.type ~= 'expr' then
+                self:line()
+            end
+        end
+
         self:operator(traversal.binary[ast.type])
         self:walk(ast.left)
         self:walk(ast.right)
     elseif self:test('output') then
-        self:builtin('O')
+        self:builtin('OUTPUT')
         self:walk(ast.argument)
     elseif self:test('dump') then
-        self:builtin('D')
+        self:builtin('DUMP')
         self:walk(ast.argument)
     elseif self:test('prompt') then
-        self:builtin('P')
+        self:builtin('PROMP')
     elseif self:test('random') then
-        self:builtin('R')
+        self:builtin('RANDOM')
     elseif traversal.unary[ast.type] then
         self:operator(traversal.unary[ast.type])
         self:walk(ast.argument)
     elseif self:test('block') then
-        self:builtin('B')
+        self:builtin('BLOCK')
+        self:indent()
         self:walk(ast.body)
+        self:dedent()
     elseif self:test('call') then
-        self:builtin('C')
+        self:builtin('CALL')
         self:walk(ast.name)
     elseif self:test('assignment') then
         self:operator('=')
         self:walk(ast.name)
         self:walk(ast.value)
     elseif self:test('while') then
-        self:builtin('W')
+        self:builtin('WHILE')
         self:walk(ast.condition)
+        self:indent()
         self:walk(ast.body)
+        self:dedent()
     elseif self:test('if') then
-        self:builtin('I')
+        self:builtin('IF')
         self:walk(ast.condition)
+        self:indent()
         self:walk(ast.body)
         self:walk(ast.fallback)
+        self:dedent()
     elseif self:test('get') then
-        self:builtin('G')
+        self:builtin('GET')
         self:walk(ast.argument)
         self:walk(ast.start)
         self:walk(ast.width)
     elseif self:test('set') then
-        self:builtin('S')
+        self:builtin('SET')
         self:walk(ast.argument)
         self:walk(ast.start)
         self:walk(ast.width)
@@ -138,91 +176,13 @@ function emit:walk(ast)
     elseif self:test('array') then
         self:operator('@')
     elseif self:test('null') then
-        self:builtin('N')
+        self:builtin('NULL')
     elseif self:test('true') then
-        self:builtin('T')
+        self:builtin('TRUE')
     elseif self:test('false') then
-        self:builtin('F')
+        self:builtin('FALSE')
     else
         print(ast.type)
-    end
-end
-
-local format = {}
-function format:build(ast)
-    if traversal.binary[ast.type] then
-        if ast.type == 'expr' then
-            self.buffer = self.buffer .. '\n'
-        end
-        self:emit(traversal.binary[ast.type])
-        self:build(ast.left)
-
-        self:build(ast.right)
-    elseif ast.type == 'prime' then
-        self:emit('[')
-        self:build(ast.argument)
-    elseif ast.type == 'ultimate' then
-        self:emit(']')
-        self:build(ast.argument)
-    elseif traversal.unary[ast.type] then
-        self:emit(traversal.unary[ast.type])
-        self:build(ast.argument)
-    elseif ast.type == 'identifier' then
-        local name = ast.characters
-        self:emit(name)
-    elseif ast.type == 'assignment' then
-        self:emit('=')
-        self:build(ast.name)
-        self:build(ast.value)
-    elseif ast.type == 'block' then
-        self:emit('BLOCK')
-        self:build(ast.body)
-    elseif ast.type == 'call' then
-        self:emit('CALL')
-        self:build(ast.name)
-    elseif ast.type == 'if' then
-        self:emit('IF')
-        self:build(ast.condition)
-        self:build(ast.body)
-        self:build(ast.fallback)
-    elseif ast.type == 'while' then
-        self:emit('WHILE')
-        self:build(ast.condition)
-        self:build(ast.body)
-    elseif ast.type == 'get' then
-        self:emit('GET')
-        self:build(ast.start)
-        self:build(ast.width)
-        self:build(ast.argument)
-    elseif ast.type == 'set' then
-        self:emit('SET')
-        self:build(ast.start)
-        self:build(ast.width)
-        self:build(ast.value)
-		self:build(ast.argument)
-    elseif ast.type == 'string' then
-        self:emit('"' .. ast.characters .. '"')
-    elseif ast.type == 'number' then
-        self:emit(ast.characters)
-    elseif ast.type == 'null' then
-        self:emit('NULL')
-    elseif ast.type == 'boolean' then
-        if ast.value then
-            self:emit('TRUE')
-        else
-            self:emit('FALSE')
-        end
-    elseif ast.type == 'list' then
-        self:emit('@')
-    else
-        frog:throw(
-            ast.token,
-            string.format('Panic during format, recieved unknown node of type %s', ast.type),
-            'Please report this as a bug in the issue tracker (https://github.com/synt7x/knightc/issues/new)',
-            'Fatal'
-        )
-
-        os.exit(1)
     end
 end
 
