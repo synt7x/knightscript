@@ -1,61 +1,58 @@
-function f(code) {
-    local r = []
-    m = [] + [0] * 30000
+local k = read()
+local r = []
+m = [] + [0] * 30000
 
-    local p = 0
-    local i = 0
-    while (i < #code) {
-        local c = code[i]
+local p = 0
+local i = 0
+while (i < #k) {
+    local c = k[i]
 
-        if (c == '>') {
-            p = (p + 1) % 30000
-        } elseif (c == '<') {
-            if (p == 0) {
-                p = 30000 - 1
-            } else {
-                p = (p - 1) % 30000
-            }
-        } elseif (c == '+') {
-            set(m, p, (m[p] + 1) % 256)
-        } elseif (c == '-') {
-            if (m[p] == 0) {
-                set(m, p, 255)
-            } else {
-                set(m, p, (m[p] - 1) % 256)
-            }
-        }  elseif (c == '.') {
-            local o = m[p]
-            if (o == 10 | (o > 31 & o < 127)) {
-                write(ascii(o))
-            }
-        } elseif (c == ',') {
-            set(m, p, ascii(head(read())))
-        } elseif (c == '[') {
-            if (m[p] != 0) {
-                push(r, i)
-            } else {
-                local b = 1
-                while (i < #code & b != 0) {
-                    i = i + 1
-                    if (code[i] == '[') {
-                        b = b + 1
-                    } elseif (code[i] == ']') {
-                        b = b - 1
-                    }
-                }
-            }
-        } elseif (c == ']') {
-            if (#r > 0) {
-                if (m[p] != 0) {
-                    i = head(r)
-                } else {
-                    pop(r)
+    if (c == '>') {
+        p = (p + 1) % 30000
+    } elseif (c == '<') {
+       if (p == 0) {
+            p = 30000 - 1
+        } else {
+            p = (p - 1) % 30000
+        }
+    } elseif (c == '+') {
+        set(m, p, (m[p] + 1) % 256)
+    } elseif (c == '-') {
+        if (m[p] == 0) {
+            set(m, p, 255)
+        } else {
+            set(m, p, (m[p] - 1) % 256)
+        }
+    }  elseif (c == '.') {
+        local o = m[p]
+        if (o == 10 | (o > 31 & o < 127)) {
+            write(ascii(o))
+        }
+    } elseif (c == ',') {
+        set(m, p, ascii(head(read())))
+    } elseif (c == '[') {
+        if (m[p] != 0) {
+            push(r, i)
+        } else {
+            local b = 1
+            while (i < #k & b != 0) {
+                i = i + 1
+                if (k[i] == '[') {
+                    b = b + 1
+                } elseif (k[i] == ']') {
+                    b = b - 1
                 }
             }
         }
-
-        i = i + 1
+    } elseif (c == ']') {
+        if (#r > 0) {
+            if (m[p] != 0) {
+                i = head(r)
+            } else {
+                pop(r)
+            }
+        }
     }
-}
 
-f(read())
+    i = i + 1
+}

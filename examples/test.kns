@@ -1,2 +1,9 @@
-local a = [5, 4, 3]
-dump(a[0])
+function say(string) {
+    print(string)
+}
+
+function a(block, string) {
+    block(string)
+}
+
+a(say, "Hello world")

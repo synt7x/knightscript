@@ -13,6 +13,28 @@ For help:
 lua main.lua -h
 ```
 
+# TODO
+
+Some parts of the compiler are not necessarily finished. However, most programs should compile and run as expected. Currently unsupported features consist of:
+
+* Monkey-patching builtin functions
+* Properly scoped `local` declarations (currently all variables are global)
+* First class support for statements (`a = if (truthy) { value }`, `a = b = 1`)
+* Optimization passes reducing code size
+* Immutable `const` declarations
+* Resolving builtin functions as identifiers that can be passed
+* Golfing argument variables in minify/golf mode (`__1` => `a`)
+* Passing functions as arguments (including builtins); currently this works halfway, however the function being called is usually clobbered and thus the call fails
+* Direct index assignment (`array[n] = value`), for now use `set(array, n, value)`
+* Integrating the [knightc](https://github.com/synt7x/knightc) typechecker
+
+Behavior that is working as intended:
+
+* Function calls utilize the argument variables (e.g. `__1`, `__2` ...)
+* Resolving name collisions with internally generated variable names
+* Placing `NULL` in the fallback expression of `IF` statements when no else statement is provided
+* Using `| > a b ? a b` to represent `a >= b` and vice versa (adding one to a side may be a more concise way, further inquiry required)
+
 # Specification
 The language specification in its entirety is available in [ebnf format](https://github.com/synt7x/knightscript/blob/main/knightscript.ebnf).
 
@@ -47,8 +69,6 @@ KnightScript contains a few variables and functions that cannot be overwritten o
         * Called using `prompt(expression)`.
         * Takes one argument and outputs its string form without a trailing newline. It then returns the next line read from `stdin`.
         * Internally represents the `PROMPT` function in Knight when combined with an `OUTPUT` call.
-
-        print|write|read|input|prompt|join|ascii|insert
 * **Arrays**
     * `join`
         * Called using `join(array, expression)`.
@@ -82,3 +102,4 @@ KnightScript contains a few variables and functions that cannot be overwritten o
         * Called using `ascii(value)`.
         * Takes one argument and returns its ascii code if it is a string or its character if it is a number.
         * Internally represents the `ASCII` function in Knight.
+    * `quit`
