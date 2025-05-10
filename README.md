@@ -18,6 +18,7 @@ lua main.lua -h
 Some parts of the compiler are not necessarily finished. However, most programs should compile and run as expected. Currently unsupported features consist of:
 
 * Monkey-patching builtin functions
+* `for (... in ...)` statements, currently unsupported
 * Properly scoped `local` declarations (currently all variables are global)
 * First class support for statements (`a = if (truthy) { value }`, `a = b = 1`)
 * Optimization passes reducing code size
@@ -36,7 +37,7 @@ Behavior that is working as intended:
 * Using `| > a b ? a b` to represent `a >= b` and vice versa (adding one to a side may be a more concise way, further inquiry required)
 
 # Specification
-The language specification in its entirety is available in [ebnf format](https://github.com/synt7x/knightscript/blob/main/knightscript.ebnf).
+The language specification in its entirety is available in [ebnf format](https://github.com/synt7x/knightscript/blob/main/knightscript.ebnf). You can also check out the [examples](https://github.com/synt7x/knightscript/tree/main/examples).
 
 ## Constants
 

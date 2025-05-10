@@ -21,7 +21,7 @@ statement = while      |
             return     |
             assignment |
             call       |
-            inplace    |
+//          inplace    |
             "break"    |
             ";"        ;
 
@@ -36,11 +36,12 @@ forbody = forarray | foriterate;
 
 for = "for" "(" forbody ")" "{" statement* "}";
 function = "function" name "(" namelist? ")" "{" statement* "}";
-anonymous = "function" "(" namelist? ")" "{" statement* "}";
+// TODO: anonymous = "function" "(" namelist? ")" "{" statement* "}";
 return = "return" expression?;
 assignment = ("local" | "const")? indexedname "=" expression;
 ternary = expression "?" expression ":" expression;
-inplace = indexedname ("+=" | "-=" | "*=" | "/=" | "%=" | "^=") expression | ternary | indexedname ("++" | "--");
+
+// TODO: inplace = indexedname ("+=" | "-=" | "*=" | "/=" | "%=" | "^=") expression | ternary | indexedname ("++" | "--");
 
 expressionlist = expression ("," expression)*;
 
@@ -70,7 +71,7 @@ expression = "null"                       |
              boolean                      |
              number                       |
              string                       |
-             anonymous                    |
+//           anonymous                    |
              indexedname                  |
              array                        |
              call                         |
