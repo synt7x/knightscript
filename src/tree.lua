@@ -10,7 +10,6 @@ end
 local function unary_expr(state)
     if state:test('!') then
         -- Consume the '!' token
-        state:accept('!')
         return function(v)
             return {
                 type = 'not',
@@ -19,7 +18,6 @@ local function unary_expr(state)
         end
     elseif state:test('-') then
         -- Consume the '-' token
-        state:accept('-')
         return function(v)
             return {
                 type = 'negate',
@@ -28,7 +26,6 @@ local function unary_expr(state)
         end
     elseif state:test('#') then
         -- Consume the '#' token
-        state:accept('#')
         return function(v)
             return {
                 type = 'length',
@@ -41,7 +38,6 @@ end
 local function binary_expr(state)
     if state:test('==') then
         -- Consume the '==' token
-        state:accept('==')
         return function(r, l)
             return {
                 type = 'exact',
@@ -51,7 +47,6 @@ local function binary_expr(state)
         end, 3
     elseif state:test('!=') then
         -- Consume the '!=' token
-        state:accept('!=')
         return function(r, l)
             return {
                 type = 'not',
@@ -64,7 +59,6 @@ local function binary_expr(state)
         end, 3
     elseif state:test('<') then
         -- Consume the '<' token
-        state:accept('<')
         return function(r, l)
             return {
                 type = 'less',
@@ -74,13 +68,23 @@ local function binary_expr(state)
         end, 3
     elseif state:test('<=') then
         -- Consume the '<=' token
-        state:accept('<=')
         return function(r, l)
-            return 
+            return {
+                type = 'or',
+                left = {
+                    type = 'less',
+                    left = l,
+                    right = r
+                },
+                right = {
+                    type = 'exact',
+                    left = l,
+                    right = r
+                }
+            }
         end, 3
     elseif state:test('>') then
         -- Consume the '>' token
-        state:accept('>')
         return function(r, l)
             return {
                 type = 'greater',
@@ -90,7 +94,6 @@ local function binary_expr(state)
         end, 3
     elseif state:test('>=') then
         -- Consume the '>=' token
-        state:accept('>=')
         return function(r, l)
             return {
                 type = 'or',
@@ -108,7 +111,6 @@ local function binary_expr(state)
         end, 3
     elseif state:test('&&') then
         -- Consume the '&&' token
-        state:accept('&&')
         return function(r, l)
             return {
                 type = 'and',
@@ -118,7 +120,6 @@ local function binary_expr(state)
         end, 2
     elseif state:test('||') then
         -- Consume the '||' token
-        state:accept('||')
         return function(r, l)
             return {
                 type = 'or',
@@ -128,7 +129,6 @@ local function binary_expr(state)
         end, 1
     elseif state:test('&') then
         -- Consume the '&&' token
-        state:accept('&')
         return function(r, l)
             return {
                 type = 'and',
@@ -138,7 +138,6 @@ local function binary_expr(state)
         end, 2
     elseif state:test('|') then
         -- Consume the '||' token
-        state:accept('|')
         return function(r, l)
             return {
                 type = 'or',
@@ -148,7 +147,6 @@ local function binary_expr(state)
         end, 1
     elseif state:test('+') then
         -- Consume the '+' token
-        state:accept('+')
         return function(r, l)
             return {
                 type = 'add',
@@ -158,7 +156,6 @@ local function binary_expr(state)
         end, 10
     elseif state:test('-') then
         -- Consume the '-' token
-        state:accept('-')
         return function(r, l)
             return {
                 type = 'subtract',
@@ -168,7 +165,6 @@ local function binary_expr(state)
         end, 10
     elseif state:test('*') then
         -- Consume the '*' token
-        state:accept('*')
         return function(r, l)
             return {
                 type = 'multiply',
@@ -178,7 +174,6 @@ local function binary_expr(state)
         end, 11
     elseif state:test('/') then
         -- Consume the '/' token
-        state:accept('/')
         return function(r, l)
             return {
                 type = 'divide',
@@ -188,7 +183,6 @@ local function binary_expr(state)
         end, 11
     elseif state:test('%') then
         -- Consume the '%' token
-        state:accept('%')
         return function(r, l)
             return {
                 type = 'modulus',
@@ -198,7 +192,6 @@ local function binary_expr(state)
         end, 11
     elseif state:test('^') then
         -- Consume the '^' token
-        state:accept('^')
         return function(r, l)
             return {
                 type = 'exponent',
@@ -292,7 +285,20 @@ local function arity_expr(limit, state, precede)
     local unary = unary_expr(state)
 
     if unary then
-        result = unary(expression(state))
+        local token = state.token
+        state:skip()
+        local value = arity_expr(12, state, false)
+        
+        if not value then
+            frog:throw(
+                token,
+                'Missing expression following unary operation',
+                'Add an expression here'
+            )
+
+            os.exit(1)
+        end
+        result = unary(value)
     else
         result = literal(state)
     end
@@ -304,7 +310,20 @@ local function arity_expr(limit, state, precede)
         if not precedence then break end
         if precedence < limit then break end
 
+        local token = state.token
+        state:skip()
+
         local operand, value = arity_expr(precedence, state, true)
+        if not result or not value then
+            frog:throw(
+                token,
+                'Missing expression in binary operation',
+                'Add an expression here'
+            )
+
+            os.exit(1)
+        end
+
         result = binary(value, result)
         binary = operand
     end
@@ -313,18 +332,53 @@ local function arity_expr(limit, state, precede)
         return binary, result
     end
 
-    if state:accept('?') then
+    if state:test('?') then
+        if not result then
+            frog:throw(
+                state.token,
+                'Missing condition in ternary',
+                'Add an expression prior'
+            )
+
+            os.exit(1)
+        end
+
+        state:accept('?')
+
+        local truthy = expression(state)
         local node = {
             type = 'or',
             left = {
                 type = 'and',
                 left = result,
-                right = expression(state)
+                right = truthy
             }
         }
 
+        if not truthy then
+            frog:throw(
+                state.token,
+                'Missing truthy side of ternary',
+                'Add an expression prior'
+            )
+
+            os.exit(1)
+        end
+
+        local token = state.token
         state:expect(':')
-        node.right = expression(state)
+        local falsey  = expression(state)
+        node.right = falsey
+
+        if not falsey then
+            frog:throw(
+                token,
+                'Missing falsey side of ternary',
+                'Add an expression after'
+            )
+
+            os.exit(1)
+        end
 
         return node
     end
@@ -405,7 +459,7 @@ end
 
 function identifier_expr(state)
     if state:accept('(') then
-        local expr = arity_expr(state, 0)
+        local expr = arity_expr(0, state)
         state:expect(')')
         return expr
     elseif state:test('identifier') then
@@ -413,6 +467,48 @@ function identifier_expr(state)
         state:symbol(identifier)
         return identifier
     end
+end
+
+local function else_expr(state)
+    -- Consume the 'else' token
+    state:accept('else')
+    -- Get the body of the else statement
+    state:expect('{')
+    local node = statement(state)
+    state:expect('}')
+
+    return node
+end
+
+local function elseif_expr(state)
+    -- Consume the 'elseif' token
+    state:accept('elseif')
+
+    -- Create a new node for the elseif statement
+    local node = {
+        type = 'if',
+    }
+
+    -- Get the condition of the elseif statement
+    state:expect('(')
+    node.condition = expression(state)
+    state:expect(')')
+
+    -- Get the body of the elseif statement
+    state:expect('{')
+    node.body = statement(state)
+    state:expect('}')
+
+    -- Check for else statements
+    if state:test('else') then
+        node.fallback = else_expr(state) or null_expr(state)
+    elseif state:test('elseif') then
+        node.fallback = elseif_expr(state) or null_expr(state)
+    else
+        node.fallback = null_expr(state)
+    end
+
+    return node
 end
 
 -- Handle if statements
@@ -443,48 +539,6 @@ local function if_expr(state)
     else
         node.fallback = null_expr(state)
     end
-
-    return node
-end
-
-local function elseif_expr(state)
-    -- Consume the 'elseif' token
-    state:accept('elseif')
-
-    -- Create a new node for the elseif statement
-    local node = {
-        type = 'if',
-    }
-
-    -- Get the condition of the elseif statement
-    state:expect('(')
-    node.condition = expression(state)
-    state:expect(')')
-
-    -- Get the body of the elseif statement
-    state:expect('{')
-    node.body = statement(state)
-    state:expect('}')
-
-    -- Check for else statements
-    if state:test('else') then
-        node.fallback = else_expr(state) or null_expr(state)
-    end
-
-    return node
-end
-
-local function else_expr(state)
-    -- Consume the 'else' token
-    state:accept('else')
-
-    -- Create a new node for the else statement
-    local node
-
-    -- Get the body of the else statement
-    state:expect('{')
-    node = statement(state)
-    state:expect('}')
 
     return node
 end

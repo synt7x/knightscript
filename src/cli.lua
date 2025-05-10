@@ -11,6 +11,7 @@ local defaults = {
     ['v'] = false, -- Version
     ['h'] = false, -- Display help message
     ['m'] = false, -- Minify compiled output
+    ['G'] = false, -- Golf compiled output
     ['q'] = false, -- Silent mode
     ['Q'] = false, -- Quiet mode
 }
@@ -54,6 +55,8 @@ function getflags(args)
                 end
             elseif char == 'm' or argument == '--minify' then
                 flags['m'] = true
+            elseif char == 'G' or argument == '--golf' then
+                flags['G'] = true
             else
                 flags[argument] = true
             end

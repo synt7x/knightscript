@@ -20,6 +20,7 @@ for i, input in ipairs(inputs) do
         frog:dump('comments', comments)
 
         local ast, symbols = parser.new(flags, tokens, comments)
+        frog:dump('pre', ast)
         frog:dump('ast', transform(ast, symbols))
 
         frog:dump('knight', emit.new(ast, flags))

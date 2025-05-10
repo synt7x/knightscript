@@ -1,0 +1,68 @@
+function run(code) {
+    local memory = []
+    local rets = []
+    memory = memory + [0] * 30000
+
+    local ptr = 0
+
+    for (i = 0, #code - 1) {
+        local character = code[i]
+
+        if (character == '>') {
+            ptr = (ptr + 1) % 30000
+        } elseif (character == '<') {
+            if (ptr == 0) {
+                ptr = 30000 - 1
+            } else {
+                ptr = (ptr - 1) % 30000
+            }
+        } elseif (character == '+') {
+            set(memory, ptr, (memory[ptr] + 1) % 256)
+        } elseif (character == '-') {
+            if (memory[ptr] == 0) {
+                set(memory, ptr, 255)
+            } else {
+                set(memory, ptr, (memory[ptr] - 1) % 256)
+            }
+        }  elseif (character == '.') {
+            local char = memory[ptr]
+            if (char == 10 | (char > 31 & char < 127)) {
+                write(ascii(char))
+            }
+        } elseif (character == ',') {
+            set(memory, ptr, ascii(head(read())))
+        } elseif (character == '[') {
+            if (memory[ptr] != 0) {
+                push(rets, i)
+            } else {
+                local b = 1
+                while (i < #code & b != 0) {
+                    i = i + 1
+                    if (code[i] == '[') {
+                        b = b + 1
+                    } elseif (code[i] == ']') {
+                        b = b - 1
+                    }
+                }
+
+                if (b != 0) {
+                    print('Missing ]')
+                    quit()
+                }
+            }
+        } elseif (character == ']') {
+            if (#rets > 0) {
+                if (memory[ptr] != 0) {
+                    i = head(rets)
+                } else {
+                    pop(rets)
+                }
+            } else {
+                print('Missing [')
+                quit()
+            }
+        }
+    }
+}
+
+run(read())

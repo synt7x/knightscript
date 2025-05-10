@@ -108,10 +108,10 @@ local function builtin(node)
         walk(node.args[1])
         node.argument = {
             type = 'add',
-            right = node.args[1] or null(),
-            left = {
+            left = node.args[1] or null(),
+            right = {
                 type = 'string',
-                value = '\\'
+                characters = '\\'
             }
         }
 
@@ -134,6 +134,10 @@ local function builtin(node)
         node.name = node.args[1] or null()
         node.args = nil
     elseif identifier == 'set' then
+        walk(node.args[1])
+        walk(node.args[2])
+        walk(node.args[3])
+
         local name = node.args[1] or null()
         local index = node.args[2] or null()
         local value = node.args[3] or null()
@@ -178,6 +182,20 @@ local function builtin(node)
         node.args = nil
     elseif identifier == 'length' then
         node.type = 'length'
+        walk(node.args[1])
+        node.argument = node.args[1] or null()
+
+        node.name = nil
+        node.args = nil
+    elseif identifier == 'quit' then
+        node.type = 'quit'
+        walk(node.args[1])
+        node.argument = node.args[1] or null()
+
+        node.name = nil
+        node.args = nil
+    elseif identifier == 'ascii' then
+        node.type = 'ascii'
         walk(node.args[1])
         node.argument = node.args[1] or null()
 
@@ -431,11 +449,7 @@ function walk(node)
         node.argument = {
             type = 'get',
             argument = name,
-            start = {
-                type = 'assignment',
-                name = placeholder,
-                value = index
-            },
+            start = index,
             width = {
                 type = 'number',
                 characters = '1'

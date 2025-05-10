@@ -15,6 +15,7 @@ function emit.new(ast, flags)
     self.tabs = 0
 
     self.minify = flags.m
+    self.golf = flags.G
 
     self:walk(self.node, true)
 
@@ -40,9 +41,11 @@ function emit:dedent()
 end
 
 function emit:line()
-    if not self.minify then
+    if not self.minify or self.golf then
         self:build('\n')
-        self:build(string.rep('\t', self.tabs))
+        if not self.golf then
+            self:build(string.rep('\t', self.tabs))
+        end
     end
 end
 
@@ -51,11 +54,11 @@ function emit:space()
 end
 
 function emit:builtin(characters)
-    if self.last == 'builtin' or not self.minify then
+    if self.last == 'builtin' or not self.minify and not self.golf then
         self:space()
     end
 
-    if not self.minify then
+    if not self.minify and not self.golf then
         self:build(characters)
     else
         self:build(characters:sub(1, 1))
@@ -65,7 +68,7 @@ function emit:builtin(characters)
 end
 
 function emit:variable(characters)
-    if self.last == 'variable' or not self.minify then
+    if (self.last == 'variable' or not self.minify and not self.golf) or (characters:sub(1, 1) == '_' and self.last == 'builtin') then
         self:space()
     end
 
@@ -75,7 +78,7 @@ function emit:variable(characters)
 end
 
 function emit:string(characters, delimiter)
-    if not self.minify then
+    if not self.minify and not self.golf then
         self:space()
     end
 
@@ -87,7 +90,7 @@ function emit:string(characters, delimiter)
 end
 
 function emit:operator(characters)
-    if self.last and not self.minify and characters ~= ';' then
+    if self.last and not self.minify and not self.golf and characters ~= ';' then
         self:space()
     end
 
@@ -97,7 +100,7 @@ function emit:operator(characters)
 end
 
 function emit:number(characters)
-    if self.last == 'variable' or self.last == 'number' or not self.minify then
+    if self.last == 'variable' or self.last == 'number' or not self.minify and not self.golf then
         self:space()
     end
 
@@ -123,6 +126,15 @@ function emit:walk(ast, root)
         self:walk(ast.argument)
     elseif self:test('dump') then
         self:builtin('DUMP')
+        self:walk(ast.argument)
+    elseif self:test('length') then
+        self:builtin('LENGTH')
+        self:walk(ast.argument)
+    elseif self:test('quit') then
+        self:builtin('QUIT')
+        self:walk(ast.argument)
+    elseif self:test('ascii') then
+        self:builtin('ASCII')
         self:walk(ast.argument)
     elseif self:test('prompt') then
         self:builtin('PROMPT')

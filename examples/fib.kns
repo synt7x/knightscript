@@ -13,5 +13,6 @@ function fib(n) {
     return a
 }
 
-local n = number(prompt('Target Number:'))
-print(fib(50))
+for (i = 1, 100) {
+    print(fib(i))
+}
