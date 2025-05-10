@@ -1,5 +1,5 @@
 local symbols = {
-    ['!'] = '!', [','] = ',', ['['] = '[', [']'] = ']',
+    ['!'] = '!',
     ['+'] = '+', ['-'] = '-', ['*'] = '*', ['/'] = '/',
     ['%'] = '%', ['^'] = '^', ['<'] = '<', ['>'] = '>',
     ['?'] = '?', ['&'] = '&', ['|'] = '|', ['='] = '=',
@@ -7,7 +7,8 @@ local symbols = {
 }
 
 local space = {
-    [';'] = ';', [':'] = ':', ['('] = '(', [')'] = ')'
+    [';'] = ';', [':'] = ':', ['('] = '(', [')'] = ')', [','] = ',',
+    ['['] = '[', [']'] = ']', ['{'] = '{', ['}'] = '}',
 }
 
 local functions = {
@@ -17,7 +18,30 @@ local functions = {
 }
 
 local literals = {
-    ['T'] = 'TRUE', ['F'] = 'FALSE', ['N'] = 'NULL',
+    ['true'] = 'true', ['false'] = 'false', ['N'] = 'null',
+}
+
+local builtin = {
+    ['set'] = 'set', ['length'] = 'length', ['length'] = 'length',
+    ['push'] = 'push', ['pop'] = 'pop', ['print'] = 'print',
+    ['dump'] = 'dump', ['write'] = 'write', ['read'] = 'read', 
+}
+
+local control = {
+    ['for'] = true,
+    ['while'] = true,
+    ['if'] = true,
+    ['elseif'] = true,
+    ['else'] = true,
+    ['function'] = true,
+    ['return'] = true,
+    ['break'] = true,
+    ['export'] = true,
+    ['import'] = true,
+    ['from'] = true,
+    ['in'] = true,
+    ['local'] = true,
+    ['const'] = true,
 }
 
 local colors = {
@@ -76,15 +100,15 @@ return function(line, options)
 
             buffer = buffer .. colors.reset
             index = index + 1
-        elseif literals[char] then
-            buffer = buffer .. colors.green .. char
+        elseif char == '_' or code >= 97 and code < 123 then
+            local identifier = char
             peek = characters[index + 1]
             if not peek then break end
 
             code = string.byte(peek)
 
-            while code >= 65 and code <= 90 and index < #characters do
-                buffer = buffer .. peek
+            while code >= 48 and code <= 57 or char == '_' or code >= 97 and code < 123 and index < #characters do
+                identifier = identifier .. peek
                 index = index + 1
                 peek = characters[index + 1]
 
@@ -93,7 +117,19 @@ return function(line, options)
                 code = string.byte(peek)
             end
 
-            buffer = buffer .. colors.reset
+            if builtin[identifier] then
+                identifier = colors.blue .. identifier .. colors.reset
+            elseif peek == '(' then
+                identifier = colors.cyan .. identifier .. colors.reset
+            elseif control[identifier] then
+                identifier = colors.yellow .. identifier .. colors.reset
+            elseif literals[identifier] then
+                identifier = colors.green .. identifier .. colors.reset
+            else
+                identifier = colors.red .. identifier .. colors.reset
+            end
+
+            buffer = buffer .. identifier
             index = index + 1
         elseif char == '"' then
             buffer = buffer .. colors.yellow .. char

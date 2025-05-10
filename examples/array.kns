@@ -1,5 +1,4 @@
 local a = []
 
-set(a, 0, 100)
-
-dump(a)
+function run(code) {
+    local memory = []
