@@ -184,12 +184,18 @@ function lexer:type(character, peek)
 				position = { frog.line, frog.char, file = frog.file }
 			})
 		end
-	else
+	elseif character == '(' or character == ')' or character == '{' or character == '}' or character == '[' or character == ']' or character == ',' or character == '?' or character == ':' then
 		table.insert(self.tokens, {
 			type = character,
 			string = character,
 			position = { frog.line, frog.char, file = frog.file }
 		})
+	else
+		frog:throw({
+			type = character,
+			string = character,
+			position = { frog.line, frog.char, file = frog.file }
+		}, 'Unexpected character token in file', 'Remove this token to satisfy the lexer')
 	end
 
 	frog:character()

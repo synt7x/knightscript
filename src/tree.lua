@@ -234,7 +234,6 @@ local function expression_stat(state)
     end
     
     if not node then
-        print(json(state.token))
         node = expression(state)
     end
 
