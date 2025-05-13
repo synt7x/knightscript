@@ -1,0 +1,36 @@
+-- This value should be maintained
+local a = 'local pass'
+
+-- Example scope for local
+function b() {
+    local a = 'local fail'
+    return a
+}
+
+-- Invoke function
+b()
+
+-- Check the value of a
+print(a)
+
+-- This value should be maintained
+local c = 'function pass'
+
+function d(c) {
+    c = 'function fail'
+    return c
+}
+
+-- Invoke function
+d(0)
+
+-- Check the value of a
+print(c)
+
+-- Example function for arguments
+function e(f) {
+    print('argument ' + f | 'pass')
+}
+
+-- Call e without any arguments
+e()

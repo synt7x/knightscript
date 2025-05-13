@@ -196,7 +196,7 @@ function emit:walk(ast, root)
     elseif self:test('false') then
         self:builtin('FALSE')
     else
-        print(ast.type)
+        print(ast.type, debug.traceback())
     end
 end
 

@@ -387,6 +387,7 @@ function walk(node)
     elseif traversal.unary[node.type] then
         walk(node.argument)
     elseif node.type == 'assignment' then
+        walk(node.name)
         walk(node.value)
     elseif node.type == 'call' then
         if node.name.type == 'identifier' then
@@ -438,6 +439,11 @@ function walk(node)
         walk(node.argument)
         walk(node.start)
         walk(node.width)
+    elseif node.type == 'set' then
+        walk(node.argument)
+        walk(node.start)
+        walk(node.width)
+        walk(node.value)
     elseif node.type == 'index' then
         walk(node.name)
         walk(node.value)

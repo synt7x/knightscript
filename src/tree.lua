@@ -206,7 +206,7 @@ local function expression_stat(state)
     local node = index_expr(state)
 
     if state:test('=') then
-        if not node or node.type ~= 'identifier' then
+        if not node or node.type ~= 'identifier' and node.type ~= 'index' then
             -- TODO: I think it may be possible to resolve the index into a set call
             -- I will work on this when I have time
             frog:throw(
@@ -221,6 +221,11 @@ local function expression_stat(state)
 
         -- Consume the '=' token
         state:accept('=')
+
+        if node.type == 'index' then
+            local a = array_assignment(node, state, expression(state))
+            return a
+        end
 
         -- Create a new node for the assignment
         local assignment_node = {
@@ -238,6 +243,73 @@ local function expression_stat(state)
     end
 
     return node
+end
+
+function array_assignment(node, state, value)
+    local name = node.name
+    local index = node.value
+
+    if node.type == 'index' then
+        local node, depth = array_assignment(name, state, value)
+
+        if not depth then
+            local tree = {
+                type = 'set',
+                argument = node.name,
+                start = index,
+                width = {
+                    type = 'number',
+                    characters = '1'
+                },
+                value = {
+                    type = 'box',
+                    argument = node.value
+                }
+            }
+
+            node.value = tree
+            return node, tree
+        else
+            local value = depth.value.argument
+            local prev_arg = depth.argument
+            local prev_index = depth.start
+            local tree = {
+                type = 'set',
+                argument = {
+                    type = 'prime',
+                    argument = {
+                        type = 'get',
+                        argument = prev_arg,
+                        start = prev_index,
+                        width = {
+                            type = 'number',
+                            characters = '1'
+                        }
+                    }
+                },
+                start = index,
+                width = {
+                    type = 'number',
+                    characters = '1'
+                },
+                value = {
+                    type = 'box',
+                    argument = value
+                }
+            }
+
+            depth.value.argument = tree
+            return node, tree.value
+        end
+
+        return node
+    elseif node.type == 'identifier' then
+        return {
+            type = 'assignment',
+            name = node,
+            value = value
+        }
+    end
 end
 
 local function array(state)
