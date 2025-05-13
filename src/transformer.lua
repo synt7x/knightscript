@@ -143,8 +143,8 @@ local function builtin(node)
         local value = node.args[3] or null()
 
         
-        node.type = 'assignment',
-        node.name = name,
+        node.type = 'assignment'
+        node.name = name
         node.value = {
             type = 'set',
             argument = name,
