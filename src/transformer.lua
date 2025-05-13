@@ -142,33 +142,24 @@ local function builtin(node)
         local index = node.args[2] or null()
         local value = node.args[3] or null()
 
-        node.type = 'expr'
-        node.left = {
-            type = 'assignment',
-            name = placeholder,
-            value = index
-        }
-
-        node.right = {
-            type = 'assignment',
-            name = name,
+        
+        node.type = 'assignment',
+        node.name = name,
+        node.value = {
+            type = 'set',
+            argument = name,
             value = {
-                type = 'set',
-                argument = name,
-                value = {
-                    type = 'box',
-                    argument = value
-                },
-                start = placeholder,
-                width = {
-                    type = 'number',
-                    characters = '1'
-                }
+                type = 'box',
+                argument = value
+            },
+            start = index,
+            width = {
+                type = 'number',
+                characters = '1'
             }
         }
 
         node.args = nil
-        node.name = nil
     elseif identifier == 'join' then
         node.type = 'exponent'
 
