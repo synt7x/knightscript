@@ -299,7 +299,7 @@ function array_assignment(node, state, value)
             }
 
             depth.value.argument = tree
-            return node, tree.value
+            return node, tree
         end
 
         return node
