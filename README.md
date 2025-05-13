@@ -2,23 +2,23 @@
 
 KnightScript is a [Lua](https://lua.org/)-JS hybrid language that was designed to target [Knight](https://github.com/knight-lang). KnightScript uses an optimizing compiler to compile directly to Knight. While KnightScript does require Lua for now, it will be self hosted in the future.
 
-# Running
+## Running
 
 In order to run KnightScript, you must first install Lua. You can find standalone executables on the Lua [download](https://lua.org/download.html) page.
 
 Compile a file named `example.kns`:
 
-```
+```sh
 lua main.lua example.kns -o example.kn
 ```
 
 For help:
 
-```
+```sh
 lua main.lua -h
 ```
 
-# TODO
+## TODO
 
 Some parts of the compiler are not necessarily finished. However, most programs should compile and run as expected. Currently unsupported features consist of:
 
@@ -40,7 +40,13 @@ Behavior that is working as intended:
 * Placing `NULL` in the fallback expression of `IF` statements when no else statement is provided
 * Using `| > a b ? a b` to represent `a >= b` and vice versa (adding one to a side may be a more concise way, further inquiry required)
 
-# Specification
+### Awaiting Stabilization
+
+These features are working, but the implementation is not necessarily bug free. Help test these features and create an issue if a bug is found.
+
+* Direct index assignment `array[n] = value` as an alternative to `set(array, n, value)`
+
+## Specification
 
 The language specification in its entirety is available in [ebnf format](https://github.com/synt7x/knightscript/blob/main/knightscript.ebnf). You can also check out the [examples](https://github.com/synt7x/knightscript/tree/main/examples).
 
