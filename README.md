@@ -23,7 +23,6 @@ lua main.lua -h
 Some parts of the compiler are not necessarily finished. However, most programs should compile and run as expected. Currently unsupported features consist of:
 
 * Monkey-patching builtin functions
-* `for (... in ...)` statements, currently unsupported
 * Properly scoped `local` declarations (currently all variables are global)
 * First class support for statements (`a = if (truthy) { value }`, `a = b = 1`)
 * Optimization passes reducing code size
@@ -45,6 +44,7 @@ Behavior that is working as intended:
 These features are working, but the implementation is not necessarily bug free. Help test these features and create an issue if a bug is found.
 
 * Direct index assignment `array[n] = value` as an alternative to `set(array, n, value)`
+* `for (... in ...)` statements
 
 ## Specification
 

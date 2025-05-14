@@ -92,18 +92,13 @@ function lexer:step(character, peek)
 			return 
 		end
 	elseif self.token.type == 'string' then
-		if character == self.token.delimiter and not self.token.escaped then
+		if character == self.token.delimiter then
 			table.insert(self.tokens, self.token)
 			self.token = {
 				position = { frog.line, frog.char, file = frog.file }
 			}
 		else
 			self.token.characters = self.token.characters .. character
-		end
-		if character == '\\' then
-			self.token.escaped = true
-		else
-			self.token.escaped = nil
 		end
 	elseif self.token.type == 'double' or self.token.type == 'compound' then
 		self.token.characters = self.token.characters .. character

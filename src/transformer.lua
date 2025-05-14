@@ -52,7 +52,21 @@ function rename(ast, identifier, target)
     elseif ast.type == 'block' then
         rename(ast.body, identifier, target)
     elseif ast.type == 'call' then
-        rename(ast.name, identifier, target)
+        ast.type = 'expr'
+        ast.left = {
+            type = 'assignment',
+            name = void,
+            value = ast.name
+        }
+        
+        ast.right = {
+            type = 'call',
+            name = void
+        }
+
+        ast.name = nil
+
+        rename(ast.left.value, identifier, target)
     elseif ast.type == 'assignment' then
         rename(ast.name, identifier, target)
         rename(ast.value, identifier, target)
@@ -448,8 +462,8 @@ function walk(node)
             argument = name,
             start = index,
             width = {
-                type = 'number',
-                characters = '1'
+                type = 'true',
+                characters = 'true'
             }
         }
 

@@ -258,8 +258,8 @@ function array_assignment(node, state, value)
                 argument = node.name,
                 start = index,
                 width = {
-                    type = 'number',
-                    characters = '1'
+                    type = 'true',
+                    characters = 'true'
                 },
                 value = {
                     type = 'box',
@@ -282,8 +282,8 @@ function array_assignment(node, state, value)
                         argument = prev_arg,
                         start = prev_index,
                         width = {
-                            type = 'number',
-                            characters = '1'
+                            type = 'true',
+                            characters = 'true'
                         }
                     }
                 },
@@ -651,30 +651,73 @@ local function for_condition(state)
     local initial_node = {
         type = 'assignment',
         name = identifier,
+        scoped = true,
     }
 
-    if state:test('in') then
+    if state:test('in') or state:test(',') then
+        local assignment_node = {
+            type = 'assignment',
+            scoped = true,
+        }
+
+        if state:accept(',') then
+            assignment_node.name = state:expect('identifier')
+        end
+
         -- Consume the 'in' token
-        state:accept('in')
+        state:expect('in')
+
+        local array = expression(state)
+
+        local follow_node = {
+            type = 'assignment',
+            name = identifier,
+            value = {
+                type = 'add',
+                left = identifier,
+                right = {
+                    type = 'number',
+                    characters = '1'
+                }
+            }
+        }
 
         local length_node = {
             type = 'length',
-            value = expression(state),
+            argument = array,
         }
 
         local condition_node = {
             type = 'less',
             left = identifier,
-            right = length_node,
+            right = length_node
         }
 
         local number = {
             type = 'number',
-            value = 0,
+            characters = 0,
         }
 
         initial_node.value = number
-        return initial_node, condition_node
+
+        if assignment_node.name then
+            assignment_node.value = {
+                type = 'prime',
+                argument = {
+                    type = 'get',
+                    start = identifier,
+                    width = {
+                        type = 'number',
+                        characters = '1'
+                    },
+                    argument = array
+                }
+            }
+
+            return initial_node, condition_node, follow_node, assignment_node
+        end
+
+        return initial_node, condition_node, follow_node
     elseif state:expect('=') then
         -- Consume the '=' token
         state:accept('=')
@@ -700,26 +743,26 @@ local function for_condition(state)
 
         if state:accept(',') then
             follow_node = {
-                    type = 'assignment',
-                    name = identifier,
-                    value = {
-                        type = 'add',
-                        left = identifier,
-                        right = expression(state)
-                    }
+                type = 'assignment',
+                name = identifier,
+                value = {
+                    type = 'add',
+                    left = identifier,
+                    right = expression(state)
                 }
+            }
         else
             follow_node = {
-                    type = 'assignment',
-                    name = identifier,
-                    value = {
-                        type = 'add',
-                        left = identifier,
-                        right = {
-                            type = 'number',
-                            characters = '1'
-                        }
+                type = 'assignment',
+                name = identifier,
+                value = {
+                    type = 'add',
+                    left = identifier,
+                    right = {
+                        type = 'number',
+                        characters = '1'
                     }
+                }
             }
         end
 
@@ -746,7 +789,7 @@ local function for_expr(state)
 
     -- Get the body of the for statement
     state:expect('(')
-    local initial, condition, follow = for_condition(state)
+    local initial, condition, follow, pre = for_condition(state)
     node.left = initial
     loop_node.condition = condition
     state:expect(')')
@@ -763,6 +806,14 @@ local function for_expr(state)
         }
     else
         loop_node.body = follow
+    end
+
+    if pre then
+        loop_node.body = {
+            type = 'expr',
+            left = pre,
+            right = loop_node.body
+        }
     end
 
     state:expect('}')

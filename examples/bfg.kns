@@ -1,27 +1,28 @@
 local k = read()
 local r = []
-m = [] + [0] * 30000
+m = [0] * 30000
 
 local p = 0
 local i = 0
+
 while (i < #k) {
     local c = k[i]
 
     if (c == '>') {
-        p = (p + 1) % 30000
+        p = (p + true) % 30000
     } elseif (c == '<') {
        if (p == 0) {
-            p = 30000 - 1
+            p = 30000 - true
         } else {
-            p = (p - 1) % 30000
+            p = (p - true) % 30000
         }
     } elseif (c == '+') {
-        set(m, p, (m[p] + 1) % 256)
+        m[p] = (m[p] + true) % 256
     } elseif (c == '-') {
         if (m[p] == 0) {
-            set(m, p, 255)
+            m[p] = 255
         } else {
-            set(m, p, (m[p] - 1) % 256)
+            m[p] = (m[p] - true) % 256
         }
     }  elseif (c == '.') {
         local o = m[p]
@@ -29,18 +30,18 @@ while (i < #k) {
             write(ascii(o))
         }
     } elseif (c == ',') {
-        set(m, p, ascii(head(read())))
+        m[p] = ascii(head(read()))
     } elseif (c == '[') {
         if (m[p] != 0) {
             push(r, i)
         } else {
             local b = 1
             while (i < #k & b != 0) {
-                i = i + 1
+                i = i + true
                 if (k[i] == '[') {
-                    b = b + 1
+                    b = b + true
                 } elseif (k[i] == ']') {
-                    b = b - 1
+                    b = b - true
                 }
             }
         }
@@ -54,5 +55,5 @@ while (i < #k) {
         }
     }
 
-    i = i + 1
+    i = i + true
 }

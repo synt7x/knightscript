@@ -3,7 +3,8 @@ function say(string) {
 }
 
 function a(block, string) {
-    block(string) @ ?
+    block(string)
+    
 }
 
 a(say, "Hello world")

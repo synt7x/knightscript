@@ -16,6 +16,14 @@ function complex() {
     }
 }
 
+function array() {
+    local a =[1, 5, "Hello", true, "Whats up"]
+
+    for (i, v in a) {
+        write(string(i) + ' ' + string(v) + ascii(10))
+    }
+}
+
 print('Simple for loop')
 simple()
 
@@ -24,3 +32,7 @@ step()
 
 print('Complex for loop')
 complex()
+
+
+print('Array based for loop')
+array()
