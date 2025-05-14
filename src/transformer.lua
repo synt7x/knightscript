@@ -3,9 +3,15 @@ local parser = require('src/parser')
 local traversal = parser.traversal
 
 local symbols = {}
+
 local void = {
     type = 'identifier',
     characters = '_'
+}
+
+local block_void = {
+    type = 'identifier',
+    characters = '__b'
 }
 
 local function get_unique(symbols, index)
@@ -46,50 +52,42 @@ end
 function rename(ast, identifier, target)
     if traversal.binary[ast.type] then
         rename(ast.left, identifier, target)
-        rename(ast.right, identifier, target)
+        return rename(ast.right, identifier, target)
     elseif traversal.unary[ast.type] then
-        rename(ast.argument, identifier, target)
+        return rename(ast.argument, identifier, target)
     elseif ast.type == 'block' then
-        rename(ast.body, identifier, target)
+        return rename(ast.body, identifier, target)
     elseif ast.type == 'call' then
-        ast.type = 'expr'
-        ast.left = {
-            type = 'assignment',
-            name = void,
-            value = ast.name
-        }
-        
-        ast.right = {
-            type = 'call',
-            name = void
-        }
+        local changed = rename(ast.name, identifier, target)
 
-        ast.name = nil
-
-        rename(ast.left.value, identifier, target)
+        return changed
     elseif ast.type == 'assignment' then
         rename(ast.name, identifier, target)
-        rename(ast.value, identifier, target)
+        return rename(ast.value, identifier, target)
     elseif ast.type == 'while' then
         rename(ast.condition, identifier, target)
-        rename(ast.body, identifier, target)
+        return rename(ast.body, identifier, target)
     elseif ast.type == 'if' then
         rename(ast.condition, identifier, target)
         rename(ast.body, identifier, target)
-        rename(ast.fallback, identifier, target)
+        return rename(ast.fallback, identifier, target)
     elseif ast.type == 'get' then
         rename(ast.argument, identifier, target)
         rename(ast.start, identifier, target)
-        rename(ast.width, identifier, target)
+        return rename(ast.width, identifier, target)
     elseif ast.type == 'set' then
         rename(ast.argument, identifier, target)
         rename(ast.start, identifier, target)
         rename(ast.width, identifier, target)
-        rename(ast.value, identifier, target)
+        return rename(ast.value, identifier, target)
     elseif ast.type == 'identifier' then
         if ast.characters == identifier.characters then
+            ast.previous = identifier.characters
             ast.characters = target
+            return ast
         end
+
+        return false
     end
 end
 
@@ -402,10 +400,13 @@ function walk(node)
         end
 
         if node.args and #node.args > 0 then
+            local args = node.args
             local name = node.name
-            node.name = nil
+            
+            node.name = {}
+            node = node.name
 
-            for i, arg in ipairs(node.args) do
+            for i, arg in ipairs(args) do
                 walk(arg)
 
                 node.type = 'expr'
@@ -418,14 +419,14 @@ function walk(node)
                     value = arg
                 }
 
-                node.right = {
-                    type = 'call'
-                }
+                node.right = {}
+
+                if i == #args then
+                    node.right = name
+                end
 
                 node = node.right
             end
-
-            node.name = name
         end
     elseif node.type == 'block' then
         walk(node.body)
@@ -479,6 +480,10 @@ end
 local function transform(ast, st)
     symbols = st
     void.characters = get_unique(symbols)
+    block_void.characters = get_unique(symbols, 'b')
+
+    symbols[void.characters] = true
+    symbols[block_void.characters] = true
 
     ast.body = walk(ast.body)
     return ast
