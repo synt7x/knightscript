@@ -4,6 +4,7 @@ local traversal = parser.traversal
 
 local symbols = {}
 local arguments = {}
+local scope
 
 local break_void = {
 	type = "identifier",
@@ -442,6 +443,8 @@ function walk(node)
 	end
 
 	if node.type == "expr" then
+		scope = node
+
 		if not node.right then
 			local left = node.left
 
@@ -465,8 +468,21 @@ function walk(node)
 	elseif traversal.unary[node.type] then
 		walk(node.argument)
 	elseif node.type == "assignment" then
+		local scope = scope
 		walk(node.name)
 		walk(node.value)
+
+		if node.scoped and scope then
+			print(json(scope))
+
+			local identifier = node.name.characters
+			local name = get_unique(symbols, identifier)
+
+			rename(scope, {
+				type = "identifier",
+				characters = identifier,
+			}, name)
+		end
 	elseif node.type == "call" then
 		local root = node
 		local original = node.name

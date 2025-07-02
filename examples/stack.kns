@@ -1,7 +1,12 @@
-local a = -1
+a = "hello"
 
-while (true) {
-    a -= 1
+local a = "no"
 
+print(a)
+
+function test(a) {
     print(a)
 }
+
+test("Hello world!")
+print(a)
