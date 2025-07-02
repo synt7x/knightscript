@@ -1,11 +1,11 @@
 return {
-    name = 'KnightScript',
-    description = 'Dynamic programming language designed for and targeting Knight.',
+	name = "KnightScript",
+	description = "Dynamic programming language designed for and targeting Knight.",
 
-    authors = {
-        'synt7x'
-    },
+	authors = {
+		"synt7x",
+	},
 
-    version = '1.0.2-alpha',
-    branch  = 'stable'
+	version = "1.0.6-alpha",
+	branch = "stable",
 }
