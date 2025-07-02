@@ -29,7 +29,7 @@ Some parts of the compiler are not necessarily finished. However, most programs 
 * Immutable `const` declarations
 * Resolving builtin functions as identifiers that can be passed
 * Golfing argument variables in minify/golf mode (`__1` => `a`)
-* Passing functions as arguments (including builtins); currently this works halfway, however the function being called is usually clobbered and thus the call fails
+* Passing functions as arguments using builtins; this works with non-builtin functions
 * Integrating the [knightc](https://github.com/synt7x/knightc) typechecker
 
 Behavior that is working as intended:

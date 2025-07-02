@@ -1,492 +1,563 @@
-local json = require('lib/json')
-local parser = require('src/parser')
+local json = require("lib/json")
+local parser = require("src/parser")
 local traversal = parser.traversal
 
 local symbols = {}
+local arguments = {}
 
 local void = {
-    type = 'identifier',
-    characters = '_'
+	type = "identifier",
+	characters = "_",
 }
 
 local block_void = {
-    type = 'identifier',
-    characters = '__b'
+	type = "identifier",
+	characters = "__b",
 }
 
 local function get_unique(symbols, index)
-    if not index then
-        if not symbols['_'] then
-            return '_'
-        elseif not symbols['v'] then
-            return 'v'
-        elseif not symbols['void'] then
-            return 'void'
-        end
-    end
+	if not index then
+		if not symbols["_"] then
+			return "_"
+		elseif not symbols["v"] then
+			return "v"
+		elseif not symbols["void"] then
+			return "void"
+		end
+	end
 
-    local n = 0
-    local identifier = '_'
+	local n = 0
+	local identifier = "_"
 
-    while symbols[identifier] do
-        identifier = '_' .. n
-        n = n + 1
-    end
+	while symbols[identifier] do
+		identifier = "_" .. n
+		n = n + 1
+	end
 
-    if index then
-        identifier = '_' .. '_' .. index
-    else
-        return identifier
-    end
+	if index then
+		identifier = "_" .. "_" .. index
+	else
+		if type(index) == "number" then
+			arguments[identifier] = true
+		end
 
-    n = 0
+		return identifier
+	end
 
-    while symbols[identifier] do
-        identifier = '_' .. n .. '_' .. index
-        n = n + 1
-    end
+	n = 0
 
-    return identifier
+	while symbols[identifier] do
+		identifier = "_" .. n .. "_" .. index
+		n = n + 1
+	end
+
+	if type(index) == "number" then
+		arguments[identifier] = true
+	end
+
+	return identifier
 end
 
 function rename(ast, identifier, target)
-    if traversal.binary[ast.type] then
-        rename(ast.left, identifier, target)
-        return rename(ast.right, identifier, target)
-    elseif traversal.unary[ast.type] then
-        return rename(ast.argument, identifier, target)
-    elseif ast.type == 'block' then
-        return rename(ast.body, identifier, target)
-    elseif ast.type == 'call' then
-        local changed = rename(ast.name, identifier, target)
+	if traversal.binary[ast.type] then
+		if ast.right then
+			rename(ast.left, identifier, target)
 
-        return changed
-    elseif ast.type == 'assignment' then
-        rename(ast.name, identifier, target)
-        return rename(ast.value, identifier, target)
-    elseif ast.type == 'while' then
-        rename(ast.condition, identifier, target)
-        return rename(ast.body, identifier, target)
-    elseif ast.type == 'if' then
-        rename(ast.condition, identifier, target)
-        rename(ast.body, identifier, target)
-        return rename(ast.fallback, identifier, target)
-    elseif ast.type == 'get' then
-        rename(ast.argument, identifier, target)
-        rename(ast.start, identifier, target)
-        return rename(ast.width, identifier, target)
-    elseif ast.type == 'set' then
-        rename(ast.argument, identifier, target)
-        rename(ast.start, identifier, target)
-        rename(ast.width, identifier, target)
-        return rename(ast.value, identifier, target)
-    elseif ast.type == 'identifier' then
-        if ast.characters == identifier.characters then
-            ast.previous = identifier.characters
-            ast.characters = target
-            return ast
-        end
+			return rename(ast.right, identifier, target)
+		end
 
-        return false
-    end
+		return rename(ast.left, identifier, target)
+	elseif traversal.unary[ast.type] then
+		return rename(ast.argument, identifier, target)
+	elseif ast.type == "block" then
+		if ast.args then
+			for i, arg in ipairs(ast.args) do
+				rename(arg, identifier, target)
+			end
+		end
+
+		return rename(ast.body, identifier, target)
+	elseif ast.type == "call" then
+		if ast.args then
+			for i, arg in ipairs(ast.args) do
+				rename(arg, identifier, target)
+			end
+		end
+
+		return rename(ast.name, identifier, target)
+	elseif ast.type == "assignment" then
+		rename(ast.name, identifier, target)
+		return rename(ast.value, identifier, target)
+	elseif ast.type == "while" then
+		rename(ast.condition, identifier, target)
+		return rename(ast.body, identifier, target)
+	elseif ast.type == "if" then
+		rename(ast.condition, identifier, target)
+		rename(ast.body, identifier, target)
+		return rename(ast.fallback, identifier, target)
+	elseif ast.type == "get" then
+		rename(ast.argument, identifier, target)
+		rename(ast.start, identifier, target)
+		return rename(ast.width, identifier, target)
+	elseif ast.type == "set" then
+		rename(ast.argument, identifier, target)
+		rename(ast.start, identifier, target)
+		rename(ast.width, identifier, target)
+		return rename(ast.value, identifier, target)
+	elseif ast.type == "identifier" then
+		if ast.characters == identifier.characters then
+			ast.previous = identifier.characters
+			ast.characters = target
+			return ast
+		end
+
+		return false
+	end
 end
 
 local function null()
-    return {
-        type = 'null'
-    }
+	return {
+		type = "null",
+	}
 end
 
 local function builtin(node)
-    local placeholder = void
+	local placeholder = void
 
-    local identifier = node.name.characters
-    if identifier == 'print' then
-        node.type = 'output'
-        walk(node.args[1])
-        node.argument = node.args[1] or null()
-        
-        node.name = nil
-        node.args = nil
-    elseif identifier == 'dump' then
-        node.type = 'dump'
-        walk(node.args[1])
-        node.argument = node.args[1] or null()
-            
-        node.name = nil
-        node.args = nil
-    elseif identifier == 'write' then
-        node.type = 'output'
-        walk(node.args[1])
-        node.argument = {
-            type = 'add',
-            left = node.args[1] or null(),
-            right = {
-                type = 'string',
-                characters = '\\'
-            }
-        }
+	local identifier = node.name.characters
+	if identifier == "print" then
+		node.type = "output"
+		walk(node.args[1])
+		node.argument = node.args[1] or null()
 
-        node.name = nil
-        node.args = nil
-    elseif identifier == 'insert' then
-        node.type = 'assignment'
-        walk(node.args[1])
-        walk(node.args[2])
+		node.name = nil
+		node.args = nil
+	elseif identifier == "dump" then
+		node.type = "dump"
+		walk(node.args[1])
+		node.argument = node.args[1] or null()
 
-        node.value = {
-            type = 'add',
-            left = node.args[1] or null(),
-            right = {
-                type = 'box',
-                argument = node.args[2] or null()
-            }
-        }
+		node.name = nil
+		node.args = nil
+	elseif identifier == "write" then
+		node.type = "output"
+		walk(node.args[1])
+		node.argument = {
+			type = "add",
+			left = node.args[1] or null(),
+			right = {
+				type = "string",
+				characters = "\\",
+			},
+		}
 
-        node.name = node.args[1] or null()
-        node.args = nil
-    elseif identifier == 'set' then
-        walk(node.args[1])
-        walk(node.args[2])
-        walk(node.args[3])
+		node.name = nil
+		node.args = nil
+	elseif identifier == "insert" then
+		node.type = "assignment"
+		walk(node.args[1])
+		walk(node.args[2])
 
-        local name = node.args[1] or null()
-        local index = node.args[2] or null()
-        local value = node.args[3] or null()
+		node.value = {
+			type = "add",
+			left = node.args[1] or null(),
+			right = {
+				type = "box",
+				argument = node.args[2] or null(),
+			},
+		}
 
-        
-        node.type = 'assignment'
-        node.name = name
-        node.value = {
-            type = 'set',
-            argument = name,
-            value = {
-                type = 'box',
-                argument = value
-            },
-            start = index,
-            width = {
-                type = 'number',
-                characters = '1'
-            }
-        }
+		node.name = node.args[1] or null()
+		node.args = nil
+	elseif identifier == "set" then
+		walk(node.args[1])
+		walk(node.args[2])
+		walk(node.args[3])
 
-        node.args = nil
-    elseif identifier == 'join' then
-        node.type = 'exponent'
+		local name = node.args[1] or null()
+		local index = node.args[2] or null()
+		local value = node.args[3] or null()
 
-        walk(node.args[1])
-        walk(node.args[2])
+		node.type = "assignment"
+		node.name = name
+		node.value = {
+			type = "set",
+			argument = name,
+			value = {
+				type = "box",
+				argument = value,
+			},
+			start = index,
+			width = {
+				type = "number",
+				characters = "1",
+			},
+		}
 
-        node.left = node.args[1] or null()
-        node.right = node.args[2] or null()
+		node.args = nil
+	elseif identifier == "join" then
+		node.type = "exponent"
 
-        node.name = nil
-        node.args = nil
-    elseif identifier == 'length' then
-        node.type = 'length'
-        walk(node.args[1])
-        node.argument = node.args[1] or null()
+		walk(node.args[1])
+		walk(node.args[2])
 
-        node.name = nil
-        node.args = nil
-    elseif identifier == 'quit' then
-        node.type = 'quit'
-        walk(node.args[1])
-        node.argument = node.args[1] or null()
+		node.left = node.args[1] or null()
+		node.right = node.args[2] or null()
 
-        node.name = nil
-        node.args = nil
-    elseif identifier == 'ascii' then
-        node.type = 'ascii'
-        walk(node.args[1])
-        node.argument = node.args[1] or null()
+		node.name = nil
+		node.args = nil
+	elseif identifier == "length" then
+		node.type = "length"
+		walk(node.args[1])
+		node.argument = node.args[1] or null()
 
-        node.name = nil
-        node.args = nil
-    elseif identifier == 'tail' then
-        node.type = 'ultimate'
-        walk(node.args[1])
-        node.argument = node.args[1] or null()
+		node.name = nil
+		node.args = nil
+	elseif identifier == "quit" then
+		node.type = "quit"
+		walk(node.args[1])
+		node.argument = node.args[1] or null()
 
-        node.name = nil
-        node.args = nil
-    elseif identifier == 'head' then
-        node.type = 'prime'
-        walk(node.args[1])
-        node.argument = node.args[1] or null()
+		node.name = nil
+		node.args = nil
+	elseif identifier == "ascii" then
+		node.type = "ascii"
+		walk(node.args[1])
+		node.argument = node.args[1] or null()
 
-        node.name = nil
-        node.args = nil
-    elseif identifier == 'push' then
-        walk(node.args[1])
-        walk(node.args[2])
+		node.name = nil
+		node.args = nil
+	elseif identifier == "tail" then
+		node.type = "ultimate"
+		walk(node.args[1])
+		node.argument = node.args[1] or null()
 
-        local name = node.args[1] or null()
-        local value = node.args[2] or null()
+		node.name = nil
+		node.args = nil
+	elseif identifier == "head" then
+		node.type = "prime"
+		walk(node.args[1])
+		node.argument = node.args[1] or null()
 
-        node.type = 'assignment'
+		node.name = nil
+		node.args = nil
+	elseif identifier == "push" then
+		walk(node.args[1])
+		walk(node.args[2])
 
-        node.name = name
-        node.value = {
-            type = 'add',
-            left = {
-                type = 'box',
-                argument = value
-            },
-            right = name
-        }
+		local name = node.args[1] or null()
+		local value = node.args[2] or null()
 
-        node.args = nil
-    elseif identifier == 'pop' then
-        walk(node.args[1])
+		node.type = "assignment"
 
-        local name = node.args[1] or null()
-        node.type = 'expr'
+		node.name = name
+		node.value = {
+			type = "add",
+			left = {
+				type = "box",
+				argument = value,
+			},
+			right = name,
+		}
 
-        node.left = {
-            type = 'assignment',
-            name = placeholder,
-            value = {
-                type = 'prime',
-                argument = name
-            }
-        }
+		node.args = nil
+	elseif identifier == "pop" then
+		walk(node.args[1])
 
-        node.right = {
-            type = 'expr',
-            left = {
-                type = 'assignment',
-                name = name,
-                value = {
-                    type = 'ultimate',
-                    argument = name
-                }
-            },
-            right = placeholder
-        }
+		local name = node.args[1] or null()
+		node.type = "expr"
 
-        node.name = nil
-        node.args = nil
-    elseif identifier == 'read' then
-        node.type = 'prompt'
-        node.name = nil
-        node.args = nil
-    elseif identifier == 'prompt' then
-        node.type = 'expr'
-        walk(node.args[1])
-        node.left = {
-            type = 'output',
-            argument = {
-                type = 'add',
-                left = node.args[1] or null(),
-                right = {
-                    type = 'string',
-                    characters = ' \\'
-                }
-            }
-        }
+		node.left = {
+			type = "assignment",
+			name = placeholder,
+			value = {
+				type = "prime",
+				argument = name,
+			},
+		}
 
-        node.right = {
-            type = 'prompt'
-        }
+		node.right = {
+			type = "expr",
+			left = {
+				type = "assignment",
+				name = name,
+				value = {
+					type = "ultimate",
+					argument = name,
+				},
+			},
+			right = placeholder,
+		}
 
-        node.name = nil
-        node.args = nil
-    elseif identifier == 'string' then
-        node.type = 'add'
-        node.left = {
-            type = 'string',
-            characters = ''
-        }
+		node.name = nil
+		node.args = nil
+	elseif identifier == "read" then
+		node.type = "prompt"
+		node.name = nil
+		node.args = nil
+	elseif identifier == "prompt" then
+		node.type = "expr"
+		walk(node.args[1])
+		node.left = {
+			type = "output",
+			argument = {
+				type = "add",
+				left = node.args[1] or null(),
+				right = {
+					type = "string",
+					characters = " \\",
+				},
+			},
+		}
 
-        walk(node.args[1])
-        node.right = node.args[1] or null()
+		node.right = {
+			type = "prompt",
+		}
 
-        node.name = nil
-        node.args = nil
-    elseif identifier == 'number' then
-        node.type = 'add'
-        node.left = {
-            type = 'number',
-            characters = '0'
-        }
+		node.name = nil
+		node.args = nil
+	elseif identifier == "string" then
+		node.type = "add"
+		node.left = {
+			type = "string",
+			characters = "",
+		}
 
-        walk(node.args[1])
-        node.right = node.args[1] or null()
-        
-        node.name = nil
-        node.args = nil
-    end
+		walk(node.args[1])
+		node.right = node.args[1] or null()
 
-    return node
+		node.name = nil
+		node.args = nil
+	elseif identifier == "number" then
+		node.type = "add"
+		node.left = {
+			type = "number",
+			characters = "0",
+		}
+
+		walk(node.args[1])
+		node.right = node.args[1] or null()
+
+		node.name = nil
+		node.args = nil
+	end
+
+	return node
 end
 
 local function array(node)
-    if #node.elements == 1 then
-        walk(node.elements[1])
+	if #node.elements == 1 then
+		walk(node.elements[1])
 
-        node.type = 'box'
-        node.argument = node.elements[1]
-    elseif #node.elements > 1 then
-        node.type = 'add'
+		node.type = "box"
+		node.argument = node.elements[1]
+	elseif #node.elements > 1 then
+		node.type = "add"
 
-        local element = node
-        
-        for i = 1, #node.elements do
-            walk(node.elements[i])
+		local element = node
 
-            element.left = {
-                type = 'box',
-                argument = node.elements[i]
-            }
+		for i = 1, #node.elements do
+			walk(node.elements[i])
 
-            if i == #node.elements - 1 then
-                walk(node.elements[i + 1])
-                element.right = {
-                    type = 'box',
-                    argument = node.elements[i + 1]
-                }
+			element.left = {
+				type = "box",
+				argument = node.elements[i],
+			}
 
-                break
-            end
+			if i == #node.elements - 1 then
+				walk(node.elements[i + 1])
+				element.right = {
+					type = "box",
+					argument = node.elements[i + 1],
+				}
 
-            element.right = {
-                type = 'add'
-            }
+				break
+			end
 
-            element = element.right
-        end
-    end
+			element.right = {
+				type = "add",
+			}
 
-    node.elements = nil
+			element = element.right
+		end
+	end
+
+	node.elements = nil
 end
 
 function walk(node)
-    if not node then return end
-    local placeholder = void
+	if not node then
+		return
+	end
 
-    if node.type == 'expr' then
-        if not node.right then
-            local left = node.left
+	if node.type == "expr" then
+		if not node.right then
+			local left = node.left
 
-            node.left = nil
-            node.right = nil
+			node.left = nil
+			node.right = nil
 
-            for k, v in pairs(left) do
-                node[k] = v
-            end
+			for k, v in pairs(left) do
+				node[k] = v
+			end
 
-            walk(node)
+			walk(node)
 
-            return node
-        end
+			return node
+		end
 
-        walk(node.left)
-        walk(node.right)
-    elseif traversal.binary[node.type] then
-        walk(node.left)
-        walk(node.right)
-    elseif traversal.unary[node.type] then
-        walk(node.argument)
-    elseif node.type == 'assignment' then
-        walk(node.name)
-        walk(node.value)
-    elseif node.type == 'call' then
-        if node.name.type == 'identifier' then
-            builtin(node)
-        else
-            walk(node.name)
-        end
+		walk(node.left)
+		walk(node.right)
+	elseif traversal.binary[node.type] then
+		walk(node.left)
+		walk(node.right)
+	elseif traversal.unary[node.type] then
+		walk(node.argument)
+	elseif node.type == "assignment" then
+		walk(node.name)
+		walk(node.value)
+	elseif node.type == "call" then
+		local root = node
+		local original = node.name
 
-        if node.args and #node.args > 0 then
-            local args = node.args
-            local name = node.name
-            
-            node.name = {}
-            node = node.name
+		if node.name.type == "identifier" then
+			builtin(node)
+		else
+			walk(node.name)
+		end
 
-            for i, arg in ipairs(args) do
-                walk(arg)
+		if node.args and #node.args > 0 then
+			local args = node.args
+			local name = node.name
 
-                node.type = 'expr'
-                node.left = {
-                    type = 'assignment',
-                    name = {
-                        type = 'identifier',
-                        characters = get_unique(symbols, i)
-                    },
-                    value = arg
-                }
+			node.name = {}
+			node = node.name
 
-                node.right = {}
+			if arguments[original.characters] then
+				name = block_void
 
-                if i == #args then
-                    node.right = name
-                end
+				node.type = "expr"
+				node.left = {
+					type = "assignment",
+					name = name,
+					value = original,
+				}
+				node.right = {}
+				node = node.right
+			end
 
-                node = node.right
-            end
-        end
-    elseif node.type == 'block' then
-        walk(node.body)
-        for i, arg in ipairs(node.args) do
-            local name = get_unique(symbols, i)
-            rename(node.body, arg, name)
-        end
-    elseif node.type == 'while' then
-        walk(node.condition)
-        walk(node.body)
-    elseif node.type == 'if' then
-        walk(node.condition)
-        walk(node.body)
-        walk(node.fallback)
-    elseif node.type == 'get' then
-        walk(node.argument)
-        walk(node.start)
-        walk(node.width)
-    elseif node.type == 'set' then
-        walk(node.argument)
-        walk(node.start)
-        walk(node.width)
-        walk(node.value)
-    elseif node.type == 'index' then
-        walk(node.name)
-        walk(node.value)
+			for i, arg in ipairs(args) do
+				walk(arg)
 
-        local name = node.name
-        local index = node.value
+				node.type = "expr"
+				node.left = {
+					type = "assignment",
+					name = {
+						type = "identifier",
+						characters = get_unique(symbols, i),
+					},
+					value = arg,
+				}
 
-        node.type = 'prime'
-        node.argument = {
-            type = 'get',
-            argument = name,
-            start = index,
-            width = {
-                type = 'true',
-                characters = 'true'
-            }
-        }
+				node.right = {}
 
-        node.name = nil
-        node.value = nil
-    elseif node.type == 'array' then
-        array(node)
-    end
+				if i == #args then
+					node.right = name
+				end
 
-    return node
+				node = node.right
+			end
+
+			if arguments[original.characters] then
+				root.type = "expr"
+
+				root.left = {
+					type = "assignment",
+					name = void,
+					value = {
+						type = "call",
+						name = root.name,
+					},
+				}
+
+				root.right = {
+					type = "expr",
+					left = {
+						type = "assignment",
+						name = original,
+						value = name,
+					},
+					right = void,
+				}
+
+				root.name = nil
+			end
+		end
+	elseif node.type == "block" then
+		for i, arg in ipairs(node.args) do
+			local name = get_unique(symbols, i)
+			rename(node.body, arg, name)
+		end
+
+		walk(node.body)
+
+		for i, arg in ipairs(node.args) do
+			local name = get_unique(symbols, i)
+			rename(node.body, arg, name)
+		end
+	elseif node.type == "while" then
+		walk(node.condition)
+		walk(node.body)
+	elseif node.type == "if" then
+		walk(node.condition)
+		walk(node.body)
+		walk(node.fallback)
+	elseif node.type == "get" then
+		walk(node.argument)
+		walk(node.start)
+		walk(node.width)
+	elseif node.type == "set" then
+		walk(node.argument)
+		walk(node.start)
+		walk(node.width)
+		walk(node.value)
+	elseif node.type == "index" then
+		walk(node.name)
+		walk(node.value)
+
+		local name = node.name
+		local index = node.value
+
+		node.type = "prime"
+		node.argument = {
+			type = "get",
+			argument = name,
+			start = index,
+			width = {
+				type = "true",
+				characters = "true",
+			},
+		}
+
+		node.name = nil
+		node.value = nil
+	elseif node.type == "array" then
+		array(node)
+	end
+
+	return node
 end
 
 local function transform(ast, st)
-    symbols = st
-    void.characters = get_unique(symbols)
-    block_void.characters = get_unique(symbols, 'b')
+	symbols = st
+	void.characters = get_unique(symbols)
+	block_void.characters = get_unique(symbols, "b")
 
-    symbols[void.characters] = true
-    symbols[block_void.characters] = true
+	symbols[void.characters] = true
+	symbols[block_void.characters] = true
 
-    ast.body = walk(ast.body)
-    return ast
+	ast.body = walk(ast.body)
+	return ast
 end
 
 return transform

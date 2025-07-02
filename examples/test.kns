@@ -1,9 +1,15 @@
 function say(string) {
-    print(string)
+    return string
 }
 
 function a(block, string) {
-    block(string)
+    print(block(string))
+    print(block(string))
+    print(block(string))
+    print(block(string))
+    print(block(string))
+    print(block(string))
+    print(block(string))
 }
 
 a(say, "Hello world")
