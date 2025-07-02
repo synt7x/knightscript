@@ -5,6 +5,16 @@ local traversal = parser.traversal
 local symbols = {}
 local arguments = {}
 
+local break_void = {
+	type = "identifier",
+	characters = "__break",
+}
+
+local stack = {
+	type = "identifier",
+	characters = "___",
+}
+
 local void = {
 	type = "identifier",
 	characters = "_",
@@ -24,6 +34,10 @@ local function get_unique(symbols, index)
 		elseif not symbols["void"] then
 			return "void"
 		end
+	end
+
+	if not symbols[index] and index and type(index) ~= "number" then
+		return index
 	end
 
 	local n = 0
@@ -111,6 +125,43 @@ function rename(ast, identifier, target)
 			return ast
 		end
 
+		return false
+	end
+end
+
+function has(ast, kind, loop)
+	if traversal.binary[ast.type] then
+		if ast.right then
+			return has(ast.left, kind, loop) or has(ast.right, kind, loop)
+		end
+
+		return has(ast.left, kind, loop)
+	elseif traversal.unary[ast.type] then
+		return has(ast.argument, kind, loop)
+	elseif ast.type == "block" then
+		return has(ast.body, kind, loop)
+	elseif ast.type == "call" then
+		return has(ast.name, kind, loop)
+	elseif ast.type == "assignment" then
+		return has(ast.value, kind, loop)
+	elseif ast.type == "while" then
+		if loop then
+			return false
+		else
+			return has(ast.condition, kind, loop) or has(ast.body, kind, loop)
+		end
+	elseif ast.type == "if" then
+		return has(ast.condition, kind, loop) or has(ast.body, kind, loop) or has(ast.fallback, kind, loop)
+	elseif ast.type == "get" then
+		return has(ast.argument, kind, loop) or has(ast.start, kind, loop) or has(ast.width, kind, loop)
+	elseif ast.type == "set" then
+		return has(ast.argument, kind, loop)
+			or has(ast.start, kind, loop)
+			or has(ast.width, kind, loop)
+			or has(ast.value, kind, loop)
+	elseif ast.type == kind then
+		return true
+	else
 		return false
 	end
 end
@@ -506,8 +557,43 @@ function walk(node)
 			rename(node.body, arg, name)
 		end
 	elseif node.type == "while" then
-		walk(node.condition)
-		walk(node.body)
+		if has(node.body, "break", true) then
+			local condition = node.condition
+
+			node.condition = {
+				type = "and",
+				left = condition,
+				right = {
+					type = "not",
+					argument = break_void,
+				},
+			}
+
+			node.type = "expr"
+			node.left = {
+				type = "while",
+				condition = node.condition,
+				body = node.body,
+			}
+
+			node.right = {
+				type = "assignment",
+				name = break_void,
+				value = {
+					type = "null",
+					characters = "null",
+				},
+			}
+
+			node.condition = nil
+			node.body = nil
+
+			walk(node.left.condition)
+			walk(node.left.body)
+		else
+			walk(node.condition)
+			walk(node.body)
+		end
 	elseif node.type == "if" then
 		walk(node.condition)
 		walk(node.body)
@@ -521,6 +607,13 @@ function walk(node)
 		walk(node.start)
 		walk(node.width)
 		walk(node.value)
+	elseif node.type == "break" then
+		node.type = "assignment"
+		node.name = break_void
+		node.value = {
+			type = "true",
+			characters = "true",
+		}
 	elseif node.type == "index" then
 		walk(node.name)
 		walk(node.value)
@@ -551,10 +644,29 @@ end
 local function transform(ast, st)
 	symbols = st
 	void.characters = get_unique(symbols)
+	stack.characters = get_unique(symbols, "stack")
+	break_void.characters = get_unique(symbols, "break")
 	block_void.characters = get_unique(symbols, "b")
 
 	symbols[void.characters] = true
 	symbols[block_void.characters] = true
+
+	if has(ast.body, "break") then
+		ast.body = {
+			type = "expr",
+			left = {
+				type = "assignment",
+				name = break_void,
+				value = {
+					type = "null",
+					characters = "null",
+				},
+			},
+			right = walk(ast.body),
+		}
+	else
+		ast.body = walk(ast.body)
+	end
 
 	ast.body = walk(ast.body)
 	return ast

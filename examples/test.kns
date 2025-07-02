@@ -1,5 +1,5 @@
 function say(string) {
-    return string
+    string
 }
 
 function a(block, string) {

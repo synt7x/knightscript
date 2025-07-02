@@ -202,6 +202,71 @@ local function binary_expr(state)
 				right = r,
 			}
 		end, 14
+	elseif state:test("!=") then
+		-- Consume the '!=' token
+		return function(r, l)
+			return {
+				type = "not",
+				argument = {
+					type = "exact",
+					left = l,
+					right = r,
+				},
+			}
+		end,
+			3
+	end
+end
+
+local function compound_expr(state, node)
+	if state:accept("+=") then
+		return {
+			type = "add",
+			left = node,
+			right = expression(state),
+		}
+	elseif state:accept("-=") then
+		return {
+			type = "subtract",
+			left = node,
+			right = expression(state),
+		}
+	elseif state:accept("*=") then
+		return {
+			type = "multiply",
+			left = node,
+			right = expression(state),
+		}
+	elseif state:accept("/=") then
+		return {
+			type = "divide",
+			left = node,
+			right = expression(state),
+		}
+	elseif state:accept("%=") then
+		return {
+			type = "modulus",
+			left = node,
+			right = expression(state),
+		}
+	elseif state:accept("^=") then
+		return {
+			type = "exponent",
+			left = node,
+			right = expression(state),
+		}
+	elseif state:accept("&=") then
+		return {
+			type = "and",
+			left = node,
+			right = expression(state),
+		}
+	elseif state:accept("|=") then
+		return {
+			type = "or",
+			left = node,
+			right = expression(state),
+		}
 	end
 end
 
@@ -227,8 +292,7 @@ local function expression_stat(state)
 		state:accept("=")
 
 		if node.type == "index" then
-			local a = array_assignment(node, state, expression(state))
-			return a
+			return array_assignment(node, state, expression(state))
 		end
 
 		-- Create a new node for the assignment
@@ -240,6 +304,16 @@ local function expression_stat(state)
 		-- Get the value of the assignment
 		assignment_node.value = expression(state)
 		return assignment_node
+	else
+		local compound = compound_expr(state, node)
+
+		if compound then
+			return {
+				type = "assignment",
+				name = node,
+				value = compound,
+			}
+		end
 	end
 
 	if not node then
@@ -587,7 +661,7 @@ local function if_expr(state)
 
 	-- Get the body of the if statement
 	state:expect("{")
-	node.body = statement(state)
+	node.body = statement(state) or null_expr(state)
 	state:expect("}")
 
 	-- Check for elseif or else statements
@@ -864,6 +938,11 @@ end
 local function break_expr(state)
 	-- TODO: Add expression to the 'while' and 'for' nodes as an additional condition
 	-- TODO: In the symbol resolver, remove the break condition if it is not in the loop
+	state:accept("break")
+
+	return {
+		type = "break",
+	}
 end
 
 local function export_expr(state)
