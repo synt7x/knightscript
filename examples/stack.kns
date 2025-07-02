@@ -1,12 +1,20 @@
-a = "hello"
-
-local a = "no"
+local a = "I am at the top"
 
 print(a)
 
-function test(a) {
+function test(a, b, c) {
+    print(a)
+    print(b)
+    print(c)
+
+    a = "but I'm still the same!"
+
+    if (a) {
+        local a = "I am local"
+        print(a)
+    }
+
     print(a)
 }
 
-test("Hello world!")
-print(a)
+test("I have been called", "test1", "test2")

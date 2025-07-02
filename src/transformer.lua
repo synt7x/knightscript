@@ -6,6 +6,7 @@ local symbols = {}
 local arguments = {}
 local scope
 
+-- Variables used for temporary storage
 local break_void = {
 	type = "identifier",
 	characters = "__break",
@@ -469,109 +470,156 @@ function walk(node)
 		walk(node.argument)
 	elseif node.type == "assignment" then
 		local scope = scope
-		walk(node.name)
-		walk(node.value)
 
 		if node.scoped and scope then
-			print(json(scope))
-
 			local identifier = node.name.characters
 			local name = get_unique(symbols, identifier)
+
+			print(name, identifier, symbols[identifier])
+			symbols[name] = true
 
 			rename(scope, {
 				type = "identifier",
 				characters = identifier,
 			}, name)
 		end
-	elseif node.type == "call" then
-		local root = node
-		local original = node.name
 
+		walk(node.name)
+		walk(node.value)
+	elseif node.type == "call" then
 		if node.name.type == "identifier" then
 			builtin(node)
 		else
 			walk(node.name)
 		end
 
-		if node.args and #node.args > 0 then
-			local args = node.args
-			local name = node.name
+		if node.type == "call" and node.args and #node.args > 0 then
+			node.type = "expr"
+			node.right = {
+				type = "call",
+				name = node.name,
+				args = node.args,
+			}
 
-			node.name = {}
-			node = node.name
+			local call = node.right
 
-			if arguments[original.characters] then
-				name = block_void
-
-				node.type = "expr"
-				node.left = {
-					type = "assignment",
-					name = name,
-					value = original,
-				}
-				node.right = {}
-				node = node.right
-			end
-
-			for i, arg in ipairs(args) do
-				walk(arg)
-
-				node.type = "expr"
-				node.left = {
-					type = "assignment",
-					name = {
-						type = "identifier",
-						characters = get_unique(symbols, i),
+			node.left = {
+				type = "assignment",
+				name = stack,
+				value = {
+					type = "add",
+					left = stack,
+					right = {
+						type = "box",
+						argument = {},
 					},
-					value = arg,
-				}
+				},
+			}
 
-				node.right = {}
+			node.args = nil
+			node.name = nil
+			node = node.left.value.right.argument
 
-				if i == #args then
-					node.right = name
+			for i, arg in ipairs(call.args) do
+				if i == #call.args then
+					node.type = "box"
+					node.argument = arg
+				else
+					node.type = "add"
+					node.left = {
+						type = "box",
+						argument = arg,
+					}
+					node.right = {}
+					node = node.right
 				end
-
-				node = node.right
-			end
-
-			if arguments[original.characters] then
-				root.type = "expr"
-
-				root.left = {
-					type = "assignment",
-					name = void,
-					value = {
-						type = "call",
-						name = root.name,
-					},
-				}
-
-				root.right = {
-					type = "expr",
-					left = {
-						type = "assignment",
-						name = original,
-						value = name,
-					},
-					right = void,
-				}
-
-				root.name = nil
 			end
 		end
 	elseif node.type == "block" then
-		for i, arg in ipairs(node.args) do
-			local name = get_unique(symbols, i)
-			rename(node.body, arg, name)
+		local body = node.body
+
+		if node.args and #node.args > 0 then
+			local args = node.args
+
+			node.body = {}
+			node = node.body
+
+			node.type = "expr"
+			node.right = {
+				type = "expr",
+				left = {},
+				right = body,
+			}
+			node.left = {
+				type = "assignment",
+				name = void,
+				value = {
+					type = "prime",
+					argument = stack,
+				},
+			}
+
+			node = node.right.left
+
+			for i, arg in ipairs(args) do
+				local name = {
+					type = "identifier",
+					characters = get_unique(symbols, arg.characters),
+				}
+
+				symbols[name.characters] = true
+				rename(body, {
+					type = "identifier",
+					characters = arg.characters,
+				}, name.characters)
+
+				if i ~= #args then
+					node.type = "expr"
+					node.left = {
+						type = "assignment",
+						name = name,
+						value = {
+							type = "prime",
+							argument = {
+								type = "get",
+								argument = void,
+								start = {
+									type = "number",
+									characters = tostring(i - 1),
+								},
+								width = {
+									type = "true",
+									characters = "true",
+								},
+							},
+						},
+					}
+
+					node.right = {}
+					node = node.right
+				else
+					node.type = "assignment"
+					node.name = name
+					node.value = {
+						type = "prime",
+						argument = {
+							type = "get",
+							argument = void,
+							start = {
+								type = "number",
+								characters = tostring(i - 1),
+							},
+							width = {
+								type = "true",
+								characters = "true",
+							},
+						},
+					}
+				end
+			end
 		end
 
-		walk(node.body)
-
-		for i, arg in ipairs(node.args) do
-			local name = get_unique(symbols, i)
-			rename(node.body, arg, name)
-		end
+		walk(body)
 	elseif node.type == "while" then
 		if has(node.body, "break", true) then
 			local condition = node.condition
@@ -678,13 +726,32 @@ local function transform(ast, st)
 					characters = "null",
 				},
 			},
-			right = walk(ast.body),
+			right = {
+				type = "expr",
+				left = {
+					type = "assignment",
+					name = stack,
+					value = {
+						type = "array",
+					},
+				},
+				right = walk(ast.body),
+			},
 		}
 	else
-		ast.body = walk(ast.body)
+		ast.body = {
+			type = "expr",
+			left = {
+				type = "assignment",
+				name = stack,
+				value = {
+					type = "array",
+				},
+			},
+			right = walk(ast.body),
+		}
 	end
 
-	ast.body = walk(ast.body)
 	return ast
 end
 

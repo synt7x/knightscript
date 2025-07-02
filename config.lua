@@ -6,6 +6,6 @@ return {
 		"synt7x",
 	},
 
-	version = "1.0.6-alpha",
+	version = "1.0.7-alpha",
 	branch = "stable",
 }
