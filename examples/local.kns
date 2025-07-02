@@ -29,7 +29,7 @@ print(c)
 
 -- Example function for arguments
 function e(f) {
-    print('argument ' + f | 'pass')
+    print('argument ' + (f | 'pass'))
 }
 
 -- Call e without any arguments

@@ -475,7 +475,6 @@ function walk(node)
 			local identifier = node.name.characters
 			local name = get_unique(symbols, identifier)
 
-			print(name, identifier, symbols[identifier])
 			symbols[name] = true
 
 			rename(scope, {
