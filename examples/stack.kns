@@ -2,10 +2,8 @@ local a = "I am at the top"
 
 print(a)
 
-function test(a, b, c) {
+function test(a) {
     print(a)
-    print(b)
-    print(c)
 
     a = "but I'm still the same!"
 
@@ -17,4 +15,4 @@ function test(a, b, c) {
     print(a)
 }
 
-test("I have been called", "test1", "test2")
+test("I have been called")

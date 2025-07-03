@@ -26,5 +26,4 @@ function get_primes(max) {
     return primes
 }
 
-local b = get_primes(get_primes(20)[7] + 100)
-dump(b)
+dump(get_primes(get_primes(20)[7] + 100))

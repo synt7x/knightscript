@@ -1,10 +1,10 @@
--- My fibbonaci program
+-- My fibonacci program
 function fib(n) {
     local a = 0
     local b = 1
 
     while (n != 0) {
-        tmp = b
+        local tmp = b
         b = a + tmp
         a = tmp
         n = n - 1
@@ -13,6 +13,8 @@ function fib(n) {
     return a
 }
 
-for (i = 1, 100) {
+local i = 1
+while (i <= 100) {
     print(fib(i))
+    i = i + 1
 }

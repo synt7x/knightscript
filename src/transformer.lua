@@ -508,19 +508,12 @@ function walk(node)
 			node.left = {
 				type = "assignment",
 				name = stack,
-				value = {
-					type = "add",
-					left = stack,
-					right = {
-						type = "box",
-						argument = {},
-					},
-				},
+				value = {},
 			}
 
 			node.args = nil
 			node.name = nil
-			node = node.left.value.right.argument
+			node = node.left.value
 
 			for i, arg in ipairs(call.args) do
 				if i == #call.args then
@@ -547,21 +540,11 @@ function walk(node)
 			node = node.body
 
 			node.type = "expr"
-			node.right = {
-				type = "expr",
-				left = {},
-				right = body,
-			}
-			node.left = {
-				type = "assignment",
-				name = void,
-				value = {
-					type = "prime",
-					argument = stack,
-				},
-			}
+			node.right = body
 
-			node = node.right.left
+			node.left = {}
+
+			node = node.left
 
 			for i, arg in ipairs(args) do
 				local name = {
@@ -584,7 +567,7 @@ function walk(node)
 							type = "prime",
 							argument = {
 								type = "get",
-								argument = void,
+								argument = stack,
 								start = {
 									type = "number",
 									characters = tostring(i - 1),
@@ -606,7 +589,7 @@ function walk(node)
 						type = "prime",
 						argument = {
 							type = "get",
-							argument = void,
+							argument = stack,
 							start = {
 								type = "number",
 								characters = tostring(i - 1),
