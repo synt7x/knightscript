@@ -1056,6 +1056,11 @@ function statement(state)
 		node.left = const_expr(state)
 	else
 		node.left = expression_stat(state)
+
+		if not node.left then
+			frog:throw(state.token, "Invalid token", "Consider removing this token to satisfy the parser", "Parser")
+			os.exit(1)
+		end
 	end
 
 	-- The right side of the expression is another expression

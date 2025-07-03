@@ -120,6 +120,9 @@ function rename(ast, identifier, target)
 		rename(ast.start, identifier, target)
 		rename(ast.width, identifier, target)
 		return rename(ast.value, identifier, target)
+	elseif ast.type == "index" then
+		rename(ast.name, identifier, target)
+		return rename(ast.value, identifier, target)
 	elseif ast.type == "identifier" then
 		if ast.characters == identifier.characters then
 			ast.previous = identifier.characters
@@ -522,12 +525,12 @@ function walk(node)
 			for i, arg in ipairs(call.args) do
 				if i == #call.args then
 					node.type = "box"
-					node.argument = arg
+					node.argument = walk(arg)
 				else
 					node.type = "add"
 					node.left = {
 						type = "box",
-						argument = arg,
+						argument = walk(arg),
 					}
 					node.right = {}
 					node = node.right

@@ -1,15 +1,5 @@
-function say(string) {
-    string
-}
+local char = ""
 
-function a(block, string) {
-    print(block(string))
-    print(block(string))
-    print(block(string))
-    print(block(string))
-    print(block(string))
-    print(block(string))
-    print(block(string))
-}
-
-a(say, "Hello world")
+if (char == 10 | (char > 31 & char < 127)) {
+                write(ascii(char))
+            }
